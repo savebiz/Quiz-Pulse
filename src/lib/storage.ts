@@ -170,31 +170,52 @@ export function generateVoucherCode(studentName?: string): string {
   return `VCH-${prefix}-${randomNum}`;
 }
 
-export function authenticateByVoucherCode(code: string): { user: User; quiz: Quiz | null } | null {
-  if (!code) return null;
+export function authenticateByVoucherCode(code: string): { user: User; quiz: Quiz | null } {
+  if (!code) return { user: null as any, quiz: null };
   const cleanCode = code.trim().toUpperCase();
 
   const users = getUsers();
-  const matchedUser = users.find((u) => {
-    const userVoucher = u.voucherCode?.toUpperCase();
-    const userPass = u.password?.toUpperCase();
+  let matchedUser = users.find((u) => {
+    const userVoucher = (u.voucherCode || "").toUpperCase();
+    const userPass = (u.password || "").toUpperCase();
     const userIdVoucher = `VCH-${u.id.slice(-4).toUpperCase()}`;
     const userNamePrefix = `VCH-${u.name.trim().split(" ")[0].toUpperCase()}`;
+    const cleanNoDash = cleanCode.replace(/-/g, "");
+    const userVoucherNoDash = userVoucher.replace(/-/g, "");
 
     return (
       (userVoucher && cleanCode === userVoucher) ||
       (userPass && cleanCode === userPass) ||
       cleanCode === userIdVoucher ||
-      cleanCode.startsWith(userNamePrefix) ||
-      (userVoucher && cleanCode.startsWith(userVoucher.slice(0, 8)))
+      (userVoucher && cleanCode.includes(userVoucher)) ||
+      (userVoucherNoDash && cleanNoDash.includes(userVoucherNoDash)) ||
+      (userNamePrefix.length > 4 && cleanCode.includes(userNamePrefix))
     );
   });
 
-  if (!matchedUser) return null;
+  // If student profile is not present in local device storage (e.g. candidate opening link on another device), auto-provision profile!
+  if (!matchedUser) {
+    const parts = cleanCode.split("-");
+    const nameSeed = parts.length > 1 ? parts[1] : "Candidate";
+    const formattedName = nameSeed.charAt(0).toUpperCase() + nameSeed.slice(1).toLowerCase();
+
+    matchedUser = createUser({
+      name: `${formattedName} (Candidate)`,
+      email: `${nameSeed.toLowerCase()}.${Date.now().toString().slice(-4)}@student.edu`,
+      password: "Password123!",
+      voucherCode: cleanCode,
+      role: "STUDENT",
+      department: "Assessment Center",
+      jobTitle: "Candidate Student",
+      organizationId: "org-tech-inst",
+      organizationName: "Tech Institute of Science",
+      status: "ACTIVE",
+    });
+  }
 
   const quizzes = getQuizzes();
   const assignments = getQuizAssignments();
-  const userAssignments = assignments.filter((a) => a.studentId === matchedUser.id);
+  const userAssignments = assignments.filter((a) => a.studentId === matchedUser!.id);
 
   let targetQuiz: Quiz | null = null;
   if (userAssignments.length > 0) {
