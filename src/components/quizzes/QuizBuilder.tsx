@@ -169,6 +169,14 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
     }
   };
 
+  const handleDeleteAllQuestions = () => {
+    if (questions.length === 0) return;
+    if (confirm(`Are you sure you want to delete ALL ${questions.length} questions from this quiz? This action cannot be undone.`)) {
+      setQuestions([]);
+      setEditingQuestionId(null);
+    }
+  };
+
   const handleSaveQuiz = () => {
     if (!title.trim()) {
       alert("Please enter a quiz title.");
@@ -309,7 +317,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
             <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-2xs">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <span className="text-xs font-bold text-slate-900">Question Outline</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <span className="text-[11px] font-semibold text-blue-600">{questions.length} Total</span>
                   <button
                     onClick={() => setShowBatchTypeModal(true)}
@@ -318,6 +326,16 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
                   >
                     Batch Type
                   </button>
+                  {questions.length > 0 && (
+                    <button
+                      onClick={handleDeleteAllQuestions}
+                      className="flex items-center gap-1 rounded-lg bg-rose-50 border border-rose-200 px-2 py-0.5 text-[10px] font-extrabold text-rose-700 hover:bg-rose-100 transition-colors"
+                      title="Delete all questions in this quiz"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      <span>Delete All</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
