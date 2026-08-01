@@ -178,6 +178,13 @@ export default function App() {
     return assignedIds.includes(q.id) || q.id === "quiz-ai-core"; // fallback seed assignment
   });
 
+  const handleInspectAttempt = (att: QuizAttempt) => {
+    setActiveAttempt(att);
+    const q = quizzes.find((x) => x.id === att.quizId);
+    if (q) setSelectedQuiz(q);
+    setCurrentView("quiz-result");
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
       {/* Offline Status Banner */}
@@ -240,6 +247,7 @@ export default function App() {
                   setSelectedQuiz(null);
                   setCurrentView("create-quiz");
                 }}
+                onInspectAttempt={handleInspectAttempt}
               />
             )}
 
