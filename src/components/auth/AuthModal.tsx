@@ -268,7 +268,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="mt-1 text-[10px] text-slate-400">Default demo password for seed users: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-700">Password123!</code></p>
+              <p className="mt-1 text-[10px] text-slate-500 font-medium">Seed Passwords: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-700">Admin2026!</code> / <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-700">Instructor2026!</code> / <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-slate-700">Password123!</code></p>
             </div>
 
             <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
