@@ -20,6 +20,7 @@ import { Quiz, UserRole } from "../../types";
 interface QuizListProps {
   quizzes: Quiz[];
   userRole: UserRole;
+  currentUser?: User;
   onSelectQuizToTake: (quiz: Quiz) => void;
   onEditQuiz: (quiz: Quiz) => void;
   onCreateQuiz: () => void;
@@ -31,6 +32,7 @@ interface QuizListProps {
 export const QuizList: React.FC<QuizListProps> = ({
   quizzes,
   userRole,
+  currentUser,
   onSelectQuizToTake,
   onEditQuiz,
   onCreateQuiz,
@@ -48,6 +50,13 @@ export const QuizList: React.FC<QuizListProps> = ({
   const categories = Array.from(new Set(quizzes.map((q) => q.category))).filter(Boolean);
 
   const filteredQuizzes = quizzes.filter((q) => {
+    // Candidates ONLY see quizzes assigned to their profile or default assigned list
+    if (isStudent && currentUser) {
+      const assignedIds = currentUser.assignedQuizIds || [];
+      const isAssignedToUser = assignedIds.includes(q.id) || q.id === "quiz-ai-core"; // fallback seed assignment
+      if (!isAssignedToUser) return false;
+    }
+
     const matchesSearch =
       q.title.toLowerCase().includes(search.toLowerCase()) ||
       q.description.toLowerCase().includes(search.toLowerCase()) ||

@@ -21,6 +21,7 @@ import {
   getAuditLogs,
   getUsers,
   getCertificates,
+  getQuizAssignments,
 } from "./lib/storage";
 import { Header } from "./components/common/Header";
 import { Sidebar } from "./components/common/Sidebar";
@@ -37,6 +38,8 @@ import { AdminPanel } from "./components/admin/AdminPanel";
 import { UserProfileModal } from "./components/profile/UserProfileModal";
 import { AuthModal } from "./components/auth/AuthModal";
 import { QuizAnswerAuditModal } from "./components/quizzes/QuizAnswerAuditModal";
+import { StudentAssignmentPortal } from "./components/instructor/StudentAssignmentPortal";
+import { OfflineStatusBanner } from "./components/common/OfflineStatusBanner";
 import { UserRole, Quiz, QuizAttempt, Question, User } from "./types";
 
 export default function App() {
@@ -80,6 +83,7 @@ export default function App() {
   const auditLogs = getAuditLogs();
   const users = getUsers();
   const certificates = getCertificates();
+  const assignments = getQuizAssignments();
 
   const handleRoleChange = (role: UserRole) => {
     setCurrentUserRole(role);
@@ -114,6 +118,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
+      {/* Offline Status Banner */}
+      <OfflineStatusBanner />
+
       {/* Top Navigation Bar */}
       {currentView !== "take-quiz" && (
         <Header
@@ -166,6 +173,7 @@ export default function App() {
               <QuizList
                 quizzes={quizzes}
                 userRole={currentUser.role}
+                currentUser={currentUser}
                 onSelectQuizToTake={handleStartQuiz}
                 onEditQuiz={(q) => {
                   setSelectedQuiz(q);
@@ -178,6 +186,15 @@ export default function App() {
                 onDuplicateQuiz={(id) => duplicateQuiz(id)}
                 onDeleteQuiz={(id) => deleteQuiz(id)}
                 onAuditAnswerKeys={(quiz) => setAuditingQuiz(quiz)}
+              />
+            )}
+
+            {currentView === "student-assignments" && (
+              <StudentAssignmentPortal
+                users={users}
+                quizzes={quizzes}
+                assignments={assignments}
+                onRefreshData={() => setTick((t) => t + 1)}
               />
             )}
 

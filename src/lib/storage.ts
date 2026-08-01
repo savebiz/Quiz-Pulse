@@ -7,6 +7,7 @@ import {
   AuditLog,
   Certificate,
   UserRole,
+  QuizAssignment,
 } from "../types";
 import {
   INITIAL_USERS,
@@ -27,6 +28,7 @@ const STORAGE_KEYS = {
   ATTEMPTS: "quizpulse_attempts",
   AUDIT_LOGS: "quizpulse_audit_logs",
   CERTIFICATES: "quizpulse_certificates",
+  ASSIGNMENTS: "quizpulse_assignments",
 };
 
 type Listener = () => void;
@@ -463,6 +465,88 @@ export function logAuditAction(action: string, details: string): void {
   setItem(STORAGE_KEYS.AUDIT_LOGS, [newLog, ...logs.slice(0, 99)]);
 }
 
+// Quiz Assignments Management
+export function getQuizAssignments(): QuizAssignment[] {
+  const defaultAssignments: QuizAssignment[] = [
+    {
+      id: "asg-001",
+      quizId: "quiz-ai-core",
+      quizTitle: "AI & Machine Learning Essentials Certification",
+      studentId: "usr-student",
+      studentName: "Sarah Jenkins (Student)",
+      studentEmail: "sarah.jenkins@student.edu",
+      assignedBy: "usr-instructor",
+      assignedByName: "Prof. David Miller",
+      assignedAt: "2026-07-20T10:00:00Z",
+      status: "COMPLETED",
+    },
+  ];
+  return getItem<QuizAssignment[]>(STORAGE_KEYS.ASSIGNMENTS, defaultAssignments);
+}
+
+export function getAssignmentsForCandidate(candidateId: string): QuizAssignment[] {
+  return getQuizAssignments().filter((a) => a.studentId === candidateId);
+}
+
+export function saveQuizAssignment(assignment: QuizAssignment): void {
+  const assignments = getQuizAssignments();
+  const index = assignments.findIndex((a) => a.id === assignment.id);
+  const updated = index >= 0 ? [...assignments] : [assignment, ...assignments];
+  if (index >= 0) updated[index] = assignment;
+  setItem(STORAGE_KEYS.ASSIGNMENTS, updated);
+}
+
+export function createQuizAssignment(
+  quizId: string,
+  studentId: string,
+  dueDate?: string,
+  accessCode?: string
+): QuizAssignment {
+  const quiz = getQuizById(quizId);
+  const users = getUsers();
+  const student = users.find((u) => u.id === studentId);
+  const currentUser = getCurrentUser();
+
+  if (!quiz) throw new Error("Quiz not found.");
+  if (!student) throw new Error("Student candidate not found.");
+
+  const newAssignment: QuizAssignment = {
+    id: `asg-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    quizId: quiz.id,
+    quizTitle: quiz.title,
+    studentId: student.id,
+    studentName: student.name,
+    studentEmail: student.email,
+    assignedBy: currentUser.id,
+    assignedByName: currentUser.name,
+    assignedAt: new Date().toISOString(),
+    dueDate,
+    accessCode,
+    status: "ASSIGNED",
+  };
+
+  saveQuizAssignment(newAssignment);
+
+  // Also append to student.assignedQuizIds if not present
+  const assignedList = student.assignedQuizIds || [];
+  if (!assignedList.includes(quiz.id)) {
+    updateUser(student.id, { assignedQuizIds: [...assignedList, quiz.id] });
+  }
+
+  logAuditAction(
+    "QUIZ_ASSIGNED",
+    `Assigned quiz '${quiz.title}' to candidate '${student.name}' (${student.email})`
+  );
+
+  return newAssignment;
+}
+
+export function deleteQuizAssignment(assignmentId: string): void {
+  const assignments = getQuizAssignments().filter((a) => a.id !== assignmentId);
+  setItem(STORAGE_KEYS.ASSIGNMENTS, assignments);
+  logAuditAction("ASSIGNMENT_DELETED", `Deleted quiz assignment ID ${assignmentId}`);
+}
+
 // Reset/Seed helper
 export function resetToSeedData() {
   localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
@@ -473,5 +557,6 @@ export function resetToSeedData() {
   localStorage.setItem(STORAGE_KEYS.ATTEMPTS, JSON.stringify(INITIAL_ATTEMPTS));
   localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(INITIAL_AUDIT_LOGS));
   localStorage.setItem(STORAGE_KEYS.CERTIFICATES, JSON.stringify(INITIAL_CERTIFICATES));
+  localStorage.removeItem(STORAGE_KEYS.ASSIGNMENTS);
   notifyStateChanged();
 }

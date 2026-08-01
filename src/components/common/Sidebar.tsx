@@ -10,6 +10,7 @@ import {
   ShieldAlert,
   Settings,
   BookOpen,
+  Users,
 } from "lucide-react";
 import { UserRole } from "../../types";
 
@@ -34,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: "quizzes", label: isStudent ? "My Quizzes" : "Quizzes & Tests", icon: FileQuestion },
     ...(!isStudent
       ? [
+          { id: "student-assignments", label: "Candidate Assignments", icon: Users },
           { id: "question-bank", label: "Question Bank", icon: Database },
           { id: "bulk-import", label: "Bulk Upload", icon: UploadCloud },
           {

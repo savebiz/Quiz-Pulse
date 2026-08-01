@@ -16,6 +16,22 @@ export interface User {
   status: "ACTIVE" | "INACTIVE" | "PENDING";
   createdAt: string;
   lastLogin?: string;
+  assignedQuizIds?: string[];
+}
+
+export interface QuizAssignment {
+  id: string;
+  quizId: string;
+  quizTitle: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  assignedBy: string;
+  assignedByName?: string;
+  assignedAt: string;
+  dueDate?: string;
+  accessCode?: string;
+  status: "ASSIGNED" | "IN_PROGRESS" | "COMPLETED";
 }
 
 export interface Organization {
