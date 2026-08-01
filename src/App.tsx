@@ -23,6 +23,7 @@ import {
   getCertificates,
   getQuizAssignments,
   switchUser,
+  authenticateByVoucherCode,
 } from "./lib/storage";
 import { Header } from "./components/common/Header";
 import { Sidebar } from "./components/common/Sidebar";
