@@ -199,20 +199,22 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
           ans.obtainedMarks = 0;
           ans.isCorrect = false;
         }
-      } else if (q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK") {
-        const isMatched = evaluateCaseInsensitiveMatch(ans.textAnswer, q.correctAnswerText);
+      } else if (q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK" || q.type === "PARAGRAPH") {
+        const expectedRef = q.correctAnswerText || q.explanation || "";
+        const isMatched = evaluateCaseInsensitiveMatch(ans.textAnswer, expectedRef);
         if (isMatched) {
           obtainedMarks += q.marks;
           ans.obtainedMarks = q.marks;
           ans.isCorrect = true;
+        } else if (q.type === "PARAGRAPH" && !expectedRef) {
+          // Requires manual grading by instructor only if no reference text is specified
+          ans.isGradedManually = false;
+          ans.obtainedMarks = 0;
+          ans.isCorrect = false;
         } else {
           ans.obtainedMarks = 0;
           ans.isCorrect = false;
         }
-      } else if (q.type === "PARAGRAPH") {
-        // Requires manual grading by instructor!
-        ans.isGradedManually = false;
-        ans.obtainedMarks = 0;
       }
     });
 

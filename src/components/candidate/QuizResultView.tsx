@@ -148,7 +148,6 @@ export const QuizResultView: React.FC<QuizResultViewProps> = ({
         <div className="space-y-6">
           {quiz.questions.map((q, idx) => {
             const ans = attempt.answers[q.id];
-            const isCorrect = ans?.isCorrect || false;
 
             // Resolve Candidate's Submitted Answer Text
             let submittedAnswerText = "";
@@ -166,11 +165,15 @@ export const QuizResultView: React.FC<QuizResultViewProps> = ({
               const correctOpts = (q.options || []).filter((o) => o.isCorrect);
               expectedAnswerText = correctOpts.map((o) => o.text).join(", ");
             } else {
-              expectedAnswerText = q.correctAnswerText || "";
+              expectedAnswerText = q.correctAnswerText || q.explanation || "";
             }
 
             const isTextQuestion = q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK" || q.type === "PARAGRAPH";
             const charDiff = isTextQuestion ? analyzeCharacterDiscrepancy(submittedAnswerText, expectedAnswerText) : null;
+
+            // Treat case-insensitive matches as full marks passed!
+            const isCorrect = (ans?.isCorrect || false) || Boolean(charDiff?.isCaseInsensitiveMatch);
+            const obtainedMarks = isCorrect ? q.marks : (ans?.obtainedMarks || 0);
 
             return (
               <div
@@ -196,7 +199,7 @@ export const QuizResultView: React.FC<QuizResultViewProps> = ({
                       <div className="mt-1 flex items-center gap-2 text-[11px]">
                         <span className="font-semibold text-slate-500">
                           Marks: <strong className={isCorrect ? "text-emerald-700 font-bold" : "text-rose-700 font-bold"}>
-                            {ans?.obtainedMarks || 0}
+                            {obtainedMarks}
                           </strong> / {q.marks}
                         </span>
                         <span className="text-slate-300">•</span>

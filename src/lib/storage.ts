@@ -280,15 +280,12 @@ export function regradeQuizAttempts(quizId: string): number {
         ) {
           isCorrect = true;
         }
-      } else if (q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK") {
-        if (evaluateCaseInsensitiveMatch(sub.textAnswer, q.correctAnswerText)) {
+      } else if (q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK" || q.type === "PARAGRAPH") {
+        const expectedRef = q.correctAnswerText || q.explanation || "";
+        if (evaluateCaseInsensitiveMatch(sub.textAnswer, expectedRef)) {
           isCorrect = true;
-        }
-      } else if (q.type === "PARAGRAPH") {
-        // Keep manual marks if graded
-        if (sub.isGradedManually) {
-          newScore += sub.obtainedMarks || 0;
-          return;
+        } else if (q.type === "PARAGRAPH" && sub.isGradedManually) {
+          isCorrect = (sub.obtainedMarks || 0) > 0;
         }
       }
 
