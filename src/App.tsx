@@ -22,6 +22,7 @@ import {
   getUsers,
   getCertificates,
   getQuizAssignments,
+  switchUser,
 } from "./lib/storage";
 import { Header } from "./components/common/Header";
 import { Sidebar } from "./components/common/Sidebar";
@@ -39,6 +40,8 @@ import { UserProfileModal } from "./components/profile/UserProfileModal";
 import { AuthModal } from "./components/auth/AuthModal";
 import { QuizAnswerAuditModal } from "./components/quizzes/QuizAnswerAuditModal";
 import { StudentAssignmentPortal } from "./components/instructor/StudentAssignmentPortal";
+import { CandidateLoginPage } from "./components/candidate/CandidateLoginPage";
+import { CandidateStudentPortal } from "./components/candidate/CandidateStudentPortal";
 import { OfflineStatusBanner } from "./components/common/OfflineStatusBanner";
 import { UserRole, Quiz, QuizAttempt, Question, User } from "./types";
 
@@ -46,6 +49,9 @@ export default function App() {
   const [initialized, setInitialized] = useState(false);
   const [currentView, setCurrentView] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Logged out / Landing Page Session state
+  const [isLoggedOut, setIsLoggedOut] = useState(false);
 
   // Selected Quiz state
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
@@ -85,6 +91,24 @@ export default function App() {
   const certificates = getCertificates();
   const assignments = getQuizAssignments();
 
+  // If candidate is logged out, render candidate landing & login page
+  if (isLoggedOut) {
+    return (
+      <CandidateLoginPage
+        onCandidateLoggedIn={(candUser) => {
+          setIsLoggedOut(false);
+          setCurrentView("dashboard");
+          setTick((t) => t + 1);
+        }}
+        onInstructorPortalClick={() => {
+          setIsLoggedOut(false);
+          setCurrentUserRole("INSTRUCTOR");
+          setCurrentView("dashboard");
+        }}
+      />
+    );
+  }
+
   const handleRoleChange = (role: UserRole) => {
     setCurrentUserRole(role);
     setCurrentView("dashboard");
@@ -115,6 +139,14 @@ export default function App() {
       alert(`Imported ${importedQs.length} questions into '${bank.title}'!`);
     }
   };
+
+  // Get candidate assigned quizzes list
+  const isStudent = currentUser.role === "STUDENT";
+  const candidateAssignedQuizzes = quizzes.filter((q) => {
+    if (!isStudent) return true;
+    const assignedIds = currentUser.assignedQuizIds || [];
+    return assignedIds.includes(q.id) || q.id === "quiz-ai-core"; // fallback seed assignment
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
@@ -155,7 +187,19 @@ export default function App() {
           />
 
           <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full">
-            {currentView === "dashboard" && (
+            {/* If Student/Candidate is logged in, show dedicated Candidate Student Portal on dashboard view */}
+            {currentView === "dashboard" && isStudent && (
+              <CandidateStudentPortal
+                candidateUser={currentUser}
+                assignedQuizzes={candidateAssignedQuizzes}
+                attempts={attempts}
+                certificates={certificates}
+                onStartQuiz={handleStartQuiz}
+                onSignOut={() => setIsLoggedOut(true)}
+              />
+            )}
+
+            {currentView === "dashboard" && !isStudent && (
               <Dashboard
                 currentUser={currentUser}
                 quizzes={quizzes}
