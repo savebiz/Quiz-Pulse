@@ -14,11 +14,13 @@ import {
   FileText,
   AlertCircle,
   Type,
+  Volume2,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { QuizAttempt, Quiz, Certificate } from "../../types";
 import { CertificateViewer } from "../certificates/CertificateViewer";
 import { analyzeCharacterDiscrepancy } from "../../lib/questionUtils";
+import { speakWord } from "../../lib/ttsEngine";
 
 interface QuizResultViewProps {
   attempt: QuizAttempt;
@@ -165,10 +167,10 @@ export const QuizResultView: React.FC<QuizResultViewProps> = ({
               const correctOpts = (q.options || []).filter((o) => o.isCorrect);
               expectedAnswerText = correctOpts.map((o) => o.text).join(", ");
             } else {
-              expectedAnswerText = q.correctAnswerText || q.explanation || "";
+              expectedAnswerText = q.spellingWord || q.correctAnswerText || q.explanation || "";
             }
 
-            const isTextQuestion = q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK" || q.type === "PARAGRAPH";
+            const isTextQuestion = q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK" || q.type === "PARAGRAPH" || q.type === "SPELLING_BEE";
             const charDiff = isTextQuestion ? analyzeCharacterDiscrepancy(submittedAnswerText, expectedAnswerText) : null;
 
             // Treat case-insensitive matches as full marks passed!
@@ -206,6 +208,16 @@ export const QuizResultView: React.FC<QuizResultViewProps> = ({
                         <span className="rounded-md bg-slate-100 px-2 py-0.5 font-extrabold text-slate-600 text-[10px]">
                           {q.type.replace(/_/g, " ")}
                         </span>
+                        {q.type === "SPELLING_BEE" && (
+                          <button
+                            type="button"
+                            onClick={() => speakWord(q.spellingWord || q.correctAnswerText || "")}
+                            className="flex items-center gap-1 rounded-md bg-purple-100 border border-purple-200 px-2 py-0.5 text-[10px] font-extrabold text-purple-800 hover:bg-purple-200 transition-colors"
+                          >
+                            <Volume2 className="h-3 w-3" />
+                            <span>▶ Replay Word</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

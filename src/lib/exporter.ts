@@ -116,3 +116,38 @@ export function exportQuestionsToTemplate() {
   XLSX.utils.book_append_sheet(workbook, worksheet, "Import_Template");
   XLSX.writeFile(workbook, `Quiz_Questions_Import_Template.xlsx`);
 }
+
+export function exportSpellingBeeTemplate() {
+  const templateData = [
+    {
+      Word: "Beautiful",
+      Hint: "Pleasing to the senses or mind",
+      Marks: 2,
+    },
+    {
+      Word: "Accommodation",
+      Hint: "A place where someone stays or lives",
+      Marks: 2,
+    },
+    {
+      Word: "Rhythm",
+      Hint: "A strong, regular repeated pattern of movement or sound",
+      Marks: 3,
+    },
+    {
+      Word: "Conscientious",
+      Hint: "Wishing to do what is right, especially to do work well",
+      Marks: 3,
+    },
+    {
+      Word: "Mischievous",
+      Hint: "Causing or showing a fondness for causing trouble",
+      Marks: 2,
+    },
+  ];
+
+  const worksheet = XLSX.utils.json_to_sheet(templateData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Spelling_Bee_Template");
+  XLSX.writeFile(workbook, `Spelling_Bee_Import_Template.xlsx`);
+}

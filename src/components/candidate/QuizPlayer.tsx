@@ -12,9 +12,12 @@ import {
   HelpCircle,
   Sparkles,
   Shuffle,
+  Volume2,
+  RotateCcw,
 } from "lucide-react";
 import { Quiz, Question, QuizAttempt, AnswerSubmission, User } from "../../types";
 import { evaluateCaseInsensitiveMatch } from "../../lib/questionUtils";
+import { speakWord, stopSpeech } from "../../lib/ttsEngine";
 
 interface QuizPlayerProps {
   quiz: Quiz;
@@ -61,6 +64,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerSubmission>>({});
+  const [playCounts, setPlayCounts] = useState<Record<string, number>>({});
   const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set());
   const [lastAutoSaveTime, setLastAutoSaveTime] = useState<string>("Just now");
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -199,8 +203,8 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
           ans.obtainedMarks = 0;
           ans.isCorrect = false;
         }
-      } else if (q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK" || q.type === "PARAGRAPH") {
-        const expectedRef = q.correctAnswerText || q.explanation || "";
+      } else if (q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK" || q.type === "PARAGRAPH" || q.type === "SPELLING_BEE") {
+        const expectedRef = q.spellingWord || q.correctAnswerText || q.explanation || "";
         const isMatched = evaluateCaseInsensitiveMatch(ans.textAnswer, expectedRef);
         if (isMatched) {
           obtainedMarks += q.marks;
@@ -424,6 +428,88 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
                   placeholder="Write your explanation or essay..."
                   className="w-full rounded-2xl border border-slate-800 bg-slate-950 p-4 text-sm text-white focus:border-blue-500 focus:outline-none"
                 />
+              </div>
+            )}
+
+            {currentQuestion.type === "SPELLING_BEE" && (
+              <div className="space-y-4">
+                <div className="rounded-3xl border border-purple-800/80 bg-gradient-to-r from-purple-950/80 via-slate-900 to-slate-950 p-6 space-y-4 shadow-xl">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-purple-900/40 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-600/30 text-purple-300 border border-purple-500/40">
+                        <Volume2 className="h-6 w-6 animate-pulse" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white">Spelling Bee Pronunciation</h4>
+                        <p className="text-[11px] text-purple-300">Listen to the spoken word and type the spelling below</p>
+                      </div>
+                    </div>
+
+                    {/* Audio Play & Replay Button */}
+                    <button
+                      type="button"
+                      disabled={(playCounts[currentQuestion.id] || 0) >= (currentQuestion.maxPlays ?? 3)}
+                      onClick={() => {
+                        const currentPlays = playCounts[currentQuestion.id] || 0;
+                        const maxPlays = currentQuestion.maxPlays ?? 3;
+                        if (currentPlays < maxPlays) {
+                          setPlayCounts((prev) => ({ ...prev, [currentQuestion.id]: currentPlays + 1 }));
+                          speakWord(currentQuestion.spellingWord || currentQuestion.correctAnswerText || "");
+                        }
+                      }}
+                      className="flex items-center gap-2 rounded-2xl bg-purple-600 px-5 py-3 text-xs font-extrabold text-white shadow-lg shadow-purple-500/30 hover:bg-purple-500 disabled:opacity-40 transition-all"
+                    >
+                      {(playCounts[currentQuestion.id] || 0) === 0 ? (
+                        <>
+                          <Volume2 className="h-4 w-4 fill-white" />
+                          <span>▶ Play Word</span>
+                        </>
+                      ) : (
+                        <>
+                          <RotateCcw className="h-4 w-4" />
+                          <span>🔁 Replay Word</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Play Count & Remaining Replays Status */}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-purple-200">
+                      Audio Replays Used: <strong className="text-white font-mono font-bold">{playCounts[currentQuestion.id] || 0}</strong> / {currentQuestion.maxPlays ?? 3}
+                    </span>
+                    {(playCounts[currentQuestion.id] || 0) >= (currentQuestion.maxPlays ?? 3) && (
+                      <span className="rounded-md bg-rose-950 px-2.5 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-800">
+                        Max Replay Limit Reached
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Optional Hint Clue Accordion */}
+                {currentQuestion.hint && (
+                  <div className="rounded-2xl border border-blue-900/60 bg-blue-950/40 p-3.5 text-xs text-blue-200 space-y-1">
+                    <div className="flex items-center gap-2 font-bold text-blue-400">
+                      <HelpCircle className="h-4 w-4" />
+                      <span>💡 Word Clue / Hint:</span>
+                    </div>
+                    <p className="pl-6 font-medium italic text-slate-300">{currentQuestion.hint}</p>
+                  </div>
+                )}
+
+                {/* Candidate Spelling Text Input */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-2">
+                    Type Your Spelling Answer Below *
+                  </label>
+                  <input
+                    type="text"
+                    value={answers[currentQuestion.id]?.textAnswer || ""}
+                    onChange={(e) => handleTextAnswer(currentQuestion.id, e.target.value)}
+                    placeholder="Type the exact spelling here..."
+                    className="w-full rounded-2xl border border-purple-800/80 bg-slate-950 p-4 font-mono text-base font-bold text-white placeholder-slate-600 focus:border-purple-500 focus:outline-none tracking-wider"
+                  />
+                </div>
               </div>
             )}
           </div>

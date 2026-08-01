@@ -19,8 +19,10 @@ import {
   CheckSquare,
   ListFilter,
   X,
+  Volume2,
 } from "lucide-react";
 import { Quiz, Question, QuestionType, OptionItem } from "../../types";
+import { speakWord } from "../../lib/ttsEngine";
 import { AIQuestionGeneratorModal } from "./AIQuestionGeneratorModal";
 import { BulkImportModal } from "../questions/BulkImportModal";
 import {
@@ -100,12 +102,18 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
     const newQ: Question = {
       id: `q-${Date.now()}`,
       type,
-      questionText: `New ${type.replace(/_/g, " ")} Question`,
-      marks: 3,
+      questionText:
+        type === "SPELLING_BEE"
+          ? "Listen to the spoken word and type its correct spelling."
+          : `New ${type.replace(/_/g, " ")} Question`,
+      marks: type === "SPELLING_BEE" ? 2 : 3,
       difficulty: "Intermediate",
       category,
-      tags: ["General"],
-      explanation: "Add explanation text here.",
+      tags: type === "SPELLING_BEE" ? ["Spelling Bee", "Audio"] : ["General"],
+      explanation: type === "SPELLING_BEE" ? "Correct spelling verification." : "Add explanation text here.",
+      spellingWord: type === "SPELLING_BEE" ? "Accommodation" : undefined,
+      maxPlays: type === "SPELLING_BEE" ? 3 : undefined,
+      hint: type === "SPELLING_BEE" ? "A place where someone stays." : undefined,
       options:
         type === "MULTIPLE_CHOICE" || type === "MULTIPLE_RESPONSE"
           ? [
@@ -120,7 +128,11 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
             ]
           : undefined,
       correctAnswerText:
-        type === "SHORT_TEXT" || type === "FILL_IN_BLANK" ? "Correct Answer" : undefined,
+        type === "SHORT_TEXT" || type === "FILL_IN_BLANK"
+          ? "Correct Answer"
+          : type === "SPELLING_BEE"
+          ? "Accommodation"
+          : undefined,
       matchingPairs:
         type === "MATCHING"
           ? [
@@ -377,6 +389,12 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
                 >
                   + Matching Pairs
                 </button>
+                <button
+                  onClick={() => addQuestion("SPELLING_BEE")}
+                  className="rounded-xl border border-purple-200 bg-purple-50 px-2.5 py-1.5 text-left text-[11px] font-bold text-purple-800 hover:bg-purple-100 transition-colors"
+                >
+                  + Spelling Bee (Audio)
+                </button>
               </div>
 
               {/* Questions List with Answer Key Inspection Badges */}
@@ -450,6 +468,7 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
                       <option value="FILL_IN_BLANK">Fill in Blank</option>
                       <option value="MATCHING">Matching Pairs</option>
                       <option value="ORDERING">Ordering Items</option>
+                      <option value="SPELLING_BEE">Spelling Bee (Audio TTS)</option>
                     </select>
                   </div>
 
@@ -542,6 +561,61 @@ export const QuizBuilder: React.FC<QuizBuilderProps> = ({
                     <p className="mt-0.5 text-[11px] text-blue-700">
                       Free Text submissions require manual instructor grading in the 'Grade Essays' portal. You can enter evaluation guidelines in the Answer Explanation box below.
                     </p>
+                  </div>
+                )}
+
+                {/* SPELLING BEE CONFIGURATION */}
+                {activeQuestion.type === "SPELLING_BEE" && (
+                  <div className="rounded-2xl border border-purple-200 bg-purple-50/60 p-4 space-y-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-purple-200/60 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Volume2 className="h-5 w-5 text-purple-600" />
+                        <h4 className="text-xs font-bold text-purple-950">Spelling Bee TTS Audio Configuration</h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => speakWord(activeQuestion.spellingWord || activeQuestion.correctAnswerText || "")}
+                        className="flex items-center gap-1.5 rounded-xl bg-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow-2xs hover:bg-purple-700 transition-colors"
+                      >
+                        <Volume2 className="h-3.5 w-3.5" />
+                        <span>▶ Test Audio Pronunciation</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-bold text-purple-950 mb-1">
+                          Target Word (Correct Spelling) *
+                        </label>
+                        <input
+                          type="text"
+                          value={activeQuestion.spellingWord || activeQuestion.correctAnswerText || ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateQuestion(activeQuestion.id, { spellingWord: val, correctAnswerText: val });
+                          }}
+                          className="w-full rounded-xl border border-purple-200 bg-white px-3 py-2 text-xs font-bold text-purple-950 focus:border-purple-500 focus:outline-none"
+                          placeholder="e.g. Accommodation"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-purple-950 mb-1">
+                          Audio Replay Limit (Max Plays)
+                        </label>
+                        <select
+                          value={activeQuestion.maxPlays ?? 3}
+                          onChange={(e) => updateQuestion(activeQuestion.id, { maxPlays: Number(e.target.value) })}
+                          className="w-full rounded-xl border border-purple-200 bg-white px-3 py-2 text-xs font-bold text-purple-950 focus:border-purple-500 focus:outline-none"
+                        >
+                          <option value={1}>1 Play Only</option>
+                          <option value={2}>2 Plays</option>
+                          <option value={3}>3 Plays (Default)</option>
+                          <option value={5}>5 Plays</option>
+                          <option value={999}>Unlimited Plays</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                 )}
 

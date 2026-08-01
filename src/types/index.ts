@@ -57,7 +57,8 @@ export type QuestionType =
   | "MATCHING"
   | "ORDERING"
   | "IMAGE_BASED"
-  | "AUDIO_VIDEO";
+  | "AUDIO_VIDEO"
+  | "SPELLING_BEE";
 
 export interface OptionItem {
   id: string;
@@ -74,7 +75,9 @@ export interface Question {
   type: QuestionType;
   questionText: string;
   options?: OptionItem[];
-  correctAnswerText?: string; // For short text, fill in blank, essay reference
+  correctAnswerText?: string; // For short text, fill in blank, essay reference, spelling bee
+  spellingWord?: string; // Target word for Spelling Bee
+  maxPlays?: number; // Max audio replay limit for Spelling Bee (default: 3)
   matchingPairs?: { left: string; right: string }[];
   orderingItems?: string[]; // Correct sequence
   mediaUrl?: string; // Image, Audio, Video URL

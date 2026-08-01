@@ -14,7 +14,7 @@ import {
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { Question } from "../../types";
-import { exportQuestionsToTemplate } from "../../lib/exporter";
+import { exportQuestionsToTemplate, exportSpellingBeeTemplate } from "../../lib/exporter";
 
 interface BulkImportModalProps {
   isOpen: boolean;
@@ -304,8 +304,36 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
     try {
       const formatted: Question[] = rows.map((row, idx) => {
+        const rowWord = row.Word || row.word || row.Spelling || row["Word"];
+        const typeRaw = (row.Type || row.type || "").toUpperCase();
+
+        // Check if row is a Spelling Bee item
+        if (rowWord || typeRaw === "SPELLING_BEE") {
+          const targetWord = String(rowWord || row["Correct Answer"] || row.correctAnswerText || "").trim();
+          const hint = String(row.Hint || row.hint || row["Hint"] || "").trim();
+          const marks = Number(row.Marks || row.marks || row["Marks"] || 2);
+
+          return {
+            id: `spbee-${Date.now()}-${idx}`,
+            type: "SPELLING_BEE",
+            questionText: "Listen to the spoken word and type its correct spelling.",
+            spellingWord: targetWord,
+            correctAnswerText: targetWord,
+            hint: hint || undefined,
+            marks,
+            maxPlays: 3,
+            category: row.Category || row.category || "Spelling Bee",
+            difficulty: (row.Difficulty || row.difficulty || "Intermediate") as any,
+            tags: ["Spelling Bee", "Bulk Import"],
+            explanation: hint ? `Hint provided: "${hint}"` : `Correct Spelling: ${targetWord}`,
+            createdBy: "Bulk Importer",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+
         const questionText = row.Question || row.questionText || row["Question Text"] || `Imported Question ${idx + 1}`;
-        const type = (row.Type || row.type || "MULTIPLE_CHOICE").toUpperCase();
+        const type = (typeRaw || "MULTIPLE_CHOICE").toUpperCase();
         const marks = Number(row.Marks || row.marks || 5);
         const category = row.Category || row.category || "General";
         const difficulty = row.Difficulty || row.difficulty || "Intermediate";
@@ -452,20 +480,34 @@ export const BulkImportModal: React.FC<BulkImportModalProps> = ({
           {activeTab === "FILE" && (
             <div className="space-y-4">
               {/* Sample Template Downloader */}
-              <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-3.5">
-                <div>
-                  <p className="font-bold text-slate-900">Download Excel Template</p>
-                  <p className="text-[11px] text-slate-500">
-                    Pre-formatted sheet with Question, Type, Options & Answer Key columns
-                  </p>
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div>
+                    <p className="font-bold text-slate-900 text-[11px]">Standard Quiz Template</p>
+                    <p className="text-[10px] text-slate-500">MCQ, Short Text, True/False</p>
+                  </div>
+                  <button
+                    onClick={exportQuestionsToTemplate}
+                    className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 shadow-2xs hover:bg-slate-100"
+                  >
+                    <Download className="h-3 w-3 text-emerald-600" />
+                    <span>.xlsx</span>
+                  </button>
                 </div>
-                <button
-                  onClick={exportQuestionsToTemplate}
-                  className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 font-bold text-slate-700 shadow-2xs hover:bg-slate-100"
-                >
-                  <Download className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>Download .xlsx</span>
-                </button>
+
+                <div className="flex items-center justify-between rounded-2xl border border-purple-200 bg-purple-50/60 p-3">
+                  <div>
+                    <p className="font-bold text-purple-900 text-[11px]">Spelling Bee Template</p>
+                    <p className="text-[10px] text-purple-600">Word, Hint, Marks columns</p>
+                  </div>
+                  <button
+                    onClick={exportSpellingBeeTemplate}
+                    className="flex items-center gap-1 rounded-xl border border-purple-300 bg-white px-2.5 py-1 text-[11px] font-bold text-purple-800 shadow-2xs hover:bg-purple-100"
+                  >
+                    <Download className="h-3 w-3 text-purple-600" />
+                    <span>.xlsx</span>
+                  </button>
+                </div>
               </div>
 
               {/* Dropzone */}
