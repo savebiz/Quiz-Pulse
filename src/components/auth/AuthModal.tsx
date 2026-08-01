@@ -33,7 +33,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const [activeTab, setActiveTab] = useState<"login" | "switcher" | "register">("switcher");
+  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -146,18 +146,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         <div className="mt-4 flex rounded-2xl bg-slate-100 p-1 text-xs font-bold text-slate-600">
           <button
             onClick={() => {
-              setActiveTab("switcher");
-              setErrorMsg("");
-            }}
-            className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 transition-all ${
-              activeTab === "switcher" ? "bg-white text-blue-600 shadow-2xs font-extrabold" : "hover:text-slate-900"
-            }`}
-          >
-            <Users className="h-3.5 w-3.5" />
-            <span>Profile Switcher</span>
-          </button>
-          <button
-            onClick={() => {
               setActiveTab("login");
               setErrorMsg("");
             }}
@@ -178,7 +166,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             }`}
           >
             <UserPlus className="h-3.5 w-3.5" />
-            <span>New Profile</span>
+            <span>Register Account</span>
           </button>
         </div>
 

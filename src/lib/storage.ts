@@ -467,21 +467,7 @@ export function logAuditAction(action: string, details: string): void {
 
 // Quiz Assignments Management
 export function getQuizAssignments(): QuizAssignment[] {
-  const defaultAssignments: QuizAssignment[] = [
-    {
-      id: "asg-001",
-      quizId: "quiz-ai-core",
-      quizTitle: "AI & Machine Learning Essentials Certification",
-      studentId: "usr-student",
-      studentName: "Sarah Jenkins (Student)",
-      studentEmail: "sarah.jenkins@student.edu",
-      assignedBy: "usr-instructor",
-      assignedByName: "Prof. David Miller",
-      assignedAt: "2026-07-20T10:00:00Z",
-      status: "COMPLETED",
-    },
-  ];
-  return getItem<QuizAssignment[]>(STORAGE_KEYS.ASSIGNMENTS, defaultAssignments);
+  return getItem<QuizAssignment[]>(STORAGE_KEYS.ASSIGNMENTS, []);
 }
 
 export function getAssignmentsForCandidate(candidateId: string): QuizAssignment[] {

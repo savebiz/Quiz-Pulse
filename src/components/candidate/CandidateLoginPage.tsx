@@ -185,33 +185,7 @@ export const CandidateLoginPage: React.FC<CandidateLoginPageProps> = ({
                 </button>
               </form>
 
-              {/* Demo Candidate Quick Launchers */}
-              {candidateUsers.length > 0 && (
-                <div className="border-t border-slate-800 pt-4 space-y-2">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Demo Candidate 1-Click Launchers:
-                  </p>
-
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {candidateUsers.slice(0, 4).map((cand) => (
-                      <button
-                        key={cand.id}
-                        onClick={() => handleQuickCandidateLogin(cand)}
-                        className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/80 p-2.5 text-left hover:border-blue-600 hover:bg-slate-900 transition-all"
-                      >
-                        <div className="flex items-center gap-2 overflow-hidden">
-                          <img src={cand.avatar} alt={cand.name} className="h-7 w-7 rounded-full border border-slate-700 object-cover" />
-                          <div className="truncate">
-                            <p className="text-xs font-bold text-white truncate">{cand.name}</p>
-                            <p className="text-[10px] text-slate-400 truncate">{cand.email}</p>
-                          </div>
-                        </div>
-                        <ArrowRight className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              </form>
             </div>
           </div>
         </div>

@@ -82,72 +82,12 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right Controls & Role Simulator */}
+      {/* Right Controls */}
       <div className="flex items-center gap-3">
-        {/* Reset Seed Data */}
-        <button
-          onClick={() => {
-            if (confirm("Reset application state to default sample quizzes and data?")) {
-              resetToSeedData();
-            }
-          }}
-          title="Reset sample data"
-          className="hidden items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 sm:flex"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-          <span>Reset Demo</span>
-        </button>
-
-        {/* Role Switcher Selector */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setShowRoleDropdown(!showRoleDropdown);
-              setShowProfileMenu(false);
-            }}
-            className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all shadow-2xs ${currentRoleConfig.color}`}
-          >
-            <currentRoleConfig.icon className="h-4 w-4" />
-            <span className="hidden sm:inline">{currentRoleConfig.label}</span>
-            <span className="sm:hidden">{currentRoleConfig.role.split("_")[0]}</span>
-            <ChevronDown className="h-3.5 w-3.5 opacity-70" />
-          </button>
-
-          {showRoleDropdown && (
-            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl ring-1 ring-black/5 z-40">
-              <div className="px-3 py-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
-                Simulate Perspective
-              </div>
-              <div className="space-y-1">
-                {rolesConfig.map((item) => {
-                  const Icon = item.icon;
-                  const isSelected = item.role === currentUser.role;
-                  return (
-                    <button
-                      key={item.role}
-                      onClick={() => {
-                        onRoleChange(item.role);
-                        setShowRoleDropdown(false);
-                      }}
-                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium transition-colors ${
-                        isSelected
-                          ? "bg-blue-50 text-blue-700 font-semibold"
-                          : "text-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className="h-4 w-4 text-slate-500" />
-                        <span>{item.label}</span>
-                      </div>
-                      {isSelected && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+        {/* User Role Badge */}
+        <div className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-bold shadow-2xs ${currentRoleConfig.color}`}>
+          <currentRoleConfig.icon className="h-4 w-4" />
+          <span>{currentRoleConfig.label}</span>
         </div>
 
         {/* Notifications */}
