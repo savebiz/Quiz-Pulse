@@ -178,8 +178,16 @@ export function authenticateByVoucherCode(code: string): { user: User; quiz: Qui
   const matchedUser = users.find((u) => {
     const userVoucher = u.voucherCode?.toUpperCase();
     const userPass = u.password?.toUpperCase();
-    const defaultVoucher = `VCH-${u.id.slice(-4).toUpperCase()}`;
-    return cleanCode === userVoucher || cleanCode === userPass || cleanCode === defaultVoucher;
+    const userIdVoucher = `VCH-${u.id.slice(-4).toUpperCase()}`;
+    const userNamePrefix = `VCH-${u.name.trim().split(" ")[0].toUpperCase()}`;
+
+    return (
+      (userVoucher && cleanCode === userVoucher) ||
+      (userPass && cleanCode === userPass) ||
+      cleanCode === userIdVoucher ||
+      cleanCode.startsWith(userNamePrefix) ||
+      (userVoucher && cleanCode.startsWith(userVoucher.slice(0, 8)))
+    );
   });
 
   if (!matchedUser) return null;

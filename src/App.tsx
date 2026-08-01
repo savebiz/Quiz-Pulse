@@ -66,10 +66,29 @@ export default function App() {
   // Other Modals
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
 
-  // Initialize storage on mount
+  // Initialize storage on mount & process candidate voucher URL parameter
   useEffect(() => {
     initStorage();
     setInitialized(true);
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const passParam = params.get("pass") || params.get("voucher") || params.get("code");
+      if (passParam) {
+        const result = authenticateByVoucherCode(passParam);
+        if (result) {
+          setIsLoggedOut(false);
+          if (result.quiz) {
+            setSelectedQuiz(result.quiz);
+            setCurrentView("take-quiz");
+          } else {
+            setCurrentView("dashboard");
+          }
+          // Clean query parameter from address bar
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    }
   }, []);
 
   // Subscribe to storage changes
