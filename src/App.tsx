@@ -36,6 +36,7 @@ import { AnalyticsDashboard } from "./components/analytics/AnalyticsDashboard";
 import { AdminPanel } from "./components/admin/AdminPanel";
 import { UserProfileModal } from "./components/profile/UserProfileModal";
 import { AuthModal } from "./components/auth/AuthModal";
+import { QuizAnswerAuditModal } from "./components/quizzes/QuizAnswerAuditModal";
 import { UserRole, Quiz, QuizAttempt, Question, User } from "./types";
 
 export default function App() {
@@ -46,6 +47,7 @@ export default function App() {
   // Selected Quiz state
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [activeAttempt, setActiveAttempt] = useState<QuizAttempt | null>(null);
+  const [auditingQuiz, setAuditingQuiz] = useState<Quiz | null>(null);
 
   // User Profile & Auth Modals
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -175,6 +177,7 @@ export default function App() {
                 }}
                 onDuplicateQuiz={(id) => duplicateQuiz(id)}
                 onDeleteQuiz={(id) => deleteQuiz(id)}
+                onAuditAnswerKeys={(quiz) => setAuditingQuiz(quiz)}
               />
             )}
 
@@ -268,6 +271,16 @@ export default function App() {
         onClose={() => setShowAuthModal(false)}
         onUserAuthenticated={() => setTick((t) => t + 1)}
       />
+
+      {/* Answer Keys & Corrections Audit Modal */}
+      {auditingQuiz && (
+        <QuizAnswerAuditModal
+          isOpen={Boolean(auditingQuiz)}
+          quiz={auditingQuiz}
+          onClose={() => setAuditingQuiz(null)}
+          onQuizUpdated={() => setTick((t) => t + 1)}
+        />
+      )}
 
       {/* Bulk Upload Modal */}
       <BulkImportModal

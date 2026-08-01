@@ -13,6 +13,7 @@ import {
   Award,
   BookOpen,
   Eye,
+  ShieldCheck,
 } from "lucide-react";
 import { Quiz, UserRole } from "../../types";
 
@@ -24,6 +25,7 @@ interface QuizListProps {
   onCreateQuiz: () => void;
   onDuplicateQuiz: (quizId: string) => void;
   onDeleteQuiz: (quizId: string) => void;
+  onAuditAnswerKeys?: (quiz: Quiz) => void;
 }
 
 export const QuizList: React.FC<QuizListProps> = ({
@@ -34,6 +36,7 @@ export const QuizList: React.FC<QuizListProps> = ({
   onCreateQuiz,
   onDuplicateQuiz,
   onDeleteQuiz,
+  onAuditAnswerKeys,
 }) => {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
@@ -68,7 +71,7 @@ export const QuizList: React.FC<QuizListProps> = ({
           <p className="mt-0.5 text-xs text-slate-500">
             {isStudent
               ? "Select an assigned assessment to take now or view past score history"
-              : "Manage, publish, duplicate, or build new assessments with AI assistance"}
+              : "Manage, publish, duplicate, audit answer keys, or build new assessments"}
           </p>
         </div>
 
@@ -213,43 +216,55 @@ export const QuizList: React.FC<QuizListProps> = ({
             </div>
 
             {/* Action Footer */}
-            <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-3.5">
-              <button
-                onClick={() => onSelectQuizToTake(quiz)}
-                className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm shadow-blue-500/20 hover:bg-blue-700 active:scale-95"
-              >
-                <Play className="h-3.5 w-3.5 fill-white" />
-                <span>Take Test</span>
-              </button>
+            <div className="mt-6 flex flex-col gap-2.5 border-t border-slate-100 pt-3.5">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => onSelectQuizToTake(quiz)}
+                  className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm shadow-blue-500/20 hover:bg-blue-700 active:scale-95"
+                >
+                  <Play className="h-3.5 w-3.5 fill-white" />
+                  <span>Take Test</span>
+                </button>
 
-              {!isStudent && (
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => onEditQuiz(quiz)}
-                    title="Edit Quiz"
-                    className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => onDuplicateQuiz(quiz.id)}
-                    title="Duplicate Quiz"
-                    className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`Are you sure you want to delete '${quiz.title}'?`)) {
-                        onDeleteQuiz(quiz.id);
-                      }
-                    }}
-                    title="Delete Quiz"
-                    className="rounded-xl p-2 text-rose-500 hover:bg-rose-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                {!isStudent && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onEditQuiz(quiz)}
+                      title="Edit Quiz"
+                      className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => onDuplicateQuiz(quiz.id)}
+                      title="Duplicate Quiz"
+                      className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to delete '${quiz.title}'?`)) {
+                          onDeleteQuiz(quiz.id);
+                        }
+                      }}
+                      title="Delete Quiz"
+                      className="rounded-xl p-2 text-rose-500 hover:bg-rose-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {!isStudent && onAuditAnswerKeys && (
+                <button
+                  onClick={() => onAuditAnswerKeys(quiz)}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50/70 py-1.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-colors"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Answer Keys & Corrections</span>
+                </button>
               )}
             </div>
           </div>

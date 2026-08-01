@@ -236,7 +236,81 @@ export function saveQuiz(quiz: Quiz): void {
     updated = [quiz, ...quizzes];
   }
   setItem(STORAGE_KEYS.QUIZZES, updated);
-  logAuditAction("QUIZ_SAVED", `Quiz '${quiz.title}' (${quiz.status}) saved.`);
+  logAuditAction("QUIZ_SAVED", `Quiz '${quiz.title}' (${quiz.status}) saved with ${quiz.questions.length} questions.`);
+
+  // Auto regrade candidates if quiz was published and has existing attempts
+  if (quiz.status === "PUBLISHED") {
+    regradeQuizAttempts(quiz.id);
+  }
+}
+
+export function regradeQuizAttempts(quizId: string): number {
+  const quiz = getQuizById(quizId);
+  if (!quiz) return 0;
+
+  const attempts = getAttempts();
+  const targetAttempts = attempts.filter((a) => a.quizId === quizId && a.status === "COMPLETED");
+  if (targetAttempts.length === 0) return 0;
+
+  let regradedCount = 0;
+
+  targetAttempts.forEach((attempt) => {
+    let newScore = 0;
+
+    quiz.questions.forEach((q) => {
+      const sub = attempt.answers[q.id];
+      if (!sub) return;
+
+      let isCorrect = false;
+
+      if (q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE") {
+        const correctOpt = q.options?.find((o) => o.isCorrect);
+        if (correctOpt && sub.selectedOptionIds && sub.selectedOptionIds.includes(correctOpt.id)) {
+          isCorrect = true;
+        }
+      } else if (q.type === "MULTIPLE_RESPONSE") {
+        const correctIds = (q.options || []).filter((o) => o.isCorrect).map((o) => o.id);
+        const selIds = sub.selectedOptionIds || [];
+        if (
+          correctIds.length === selIds.length &&
+          correctIds.every((id) => selIds.includes(id))
+        ) {
+          isCorrect = true;
+        }
+      } else if (q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK") {
+        const normSub = (sub.textAnswer || "").trim().toLowerCase();
+        const normAns = (q.correctAnswerText || "").trim().toLowerCase();
+        if (normSub && normAns && normSub === normAns) {
+          isCorrect = true;
+        }
+      } else if (q.type === "PARAGRAPH") {
+        // Keep manual marks if graded
+        if (sub.isGradedManually) {
+          newScore += sub.obtainedMarks || 0;
+          return;
+        }
+      }
+
+      const marksAwarded = isCorrect ? q.marks : 0;
+      sub.isCorrect = isCorrect;
+      sub.obtainedMarks = marksAwarded;
+      newScore += marksAwarded;
+    });
+
+    attempt.score = newScore;
+    attempt.totalMarks = quiz.totalMarks;
+    attempt.percentage = parseFloat(((newScore / (quiz.totalMarks || 1)) * 100).toFixed(1));
+    attempt.isPassed = attempt.percentage >= quiz.settings.passingScorePercentage;
+
+    saveAttempt(attempt);
+    regradedCount++;
+  });
+
+  if (regradedCount > 0) {
+    logAuditAction("POST_PUBLISH_REGRADE", `Auto-regraded ${regradedCount} attempts for quiz '${quiz.title}' following key corrections.`);
+  }
+
+  return regradedCount;
 }
 
 export function deleteQuiz(quizId: string): void {
