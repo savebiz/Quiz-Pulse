@@ -184,8 +184,6 @@ export const CandidateLoginPage: React.FC<CandidateLoginPageProps> = ({
                   <span>Sign In & Access My Tests</span>
                 </button>
               </form>
-
-              </form>
             </div>
           </div>
         </div>
