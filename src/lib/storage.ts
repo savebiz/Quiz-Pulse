@@ -18,6 +18,7 @@ import {
   INITIAL_AUDIT_LOGS,
   INITIAL_CERTIFICATES,
 } from "../data/seedData";
+import { evaluateCaseInsensitiveMatch } from "./questionUtils";
 
 const STORAGE_KEYS = {
   CURRENT_USER_ID: "quizpulse_current_user_id",
@@ -280,9 +281,7 @@ export function regradeQuizAttempts(quizId: string): number {
           isCorrect = true;
         }
       } else if (q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK") {
-        const normSub = (sub.textAnswer || "").trim().toLowerCase();
-        const normAns = (q.correctAnswerText || "").trim().toLowerCase();
-        if (normSub && normAns && normSub === normAns) {
+        if (evaluateCaseInsensitiveMatch(sub.textAnswer, q.correctAnswerText)) {
           isCorrect = true;
         }
       } else if (q.type === "PARAGRAPH") {

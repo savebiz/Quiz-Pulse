@@ -11,10 +11,14 @@ import {
   Download,
   HelpCircle,
   Loader2,
+  FileText,
+  AlertCircle,
+  Type,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { QuizAttempt, Quiz, Certificate } from "../../types";
 import { CertificateViewer } from "../certificates/CertificateViewer";
+import { analyzeCharacterDiscrepancy } from "../../lib/questionUtils";
 
 interface QuizResultViewProps {
   attempt: QuizAttempt;
@@ -135,26 +139,50 @@ export const QuizResultView: React.FC<QuizResultViewProps> = ({
       {/* Answer Review Section */}
       <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs space-y-6">
         <div className="border-b border-slate-100 pb-3">
-          <h2 className="text-base font-bold text-slate-900">Answer Breakdown & Explanations</h2>
-          <p className="text-xs text-slate-500">Review correct keys or generate step-by-step AI explanation</p>
+          <h2 className="text-base font-bold text-slate-900">Detailed Answer Review & Case Discrepancy Breakdown</h2>
+          <p className="text-xs text-slate-500">
+            Compare your submitted responses against correct reference keys, character differences, and recitation typos
+          </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           {quiz.questions.map((q, idx) => {
             const ans = attempt.answers[q.id];
             const isCorrect = ans?.isCorrect || false;
-            const correctOpt = q.options?.find((o) => o.isCorrect);
+
+            // Resolve Candidate's Submitted Answer Text
+            let submittedAnswerText = "";
+            if (q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE" || q.type === "MULTIPLE_RESPONSE") {
+              const selectedIds = ans?.selectedOptionIds || [];
+              const selectedOpts = (q.options || []).filter((o) => selectedIds.includes(o.id));
+              submittedAnswerText = selectedOpts.map((o) => o.text).join(", ");
+            } else {
+              submittedAnswerText = ans?.textAnswer || "";
+            }
+
+            // Resolve Correct Answer Reference Text
+            let expectedAnswerText = "";
+            if (q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE" || q.type === "MULTIPLE_RESPONSE") {
+              const correctOpts = (q.options || []).filter((o) => o.isCorrect);
+              expectedAnswerText = correctOpts.map((o) => o.text).join(", ");
+            } else {
+              expectedAnswerText = q.correctAnswerText || "";
+            }
+
+            const isTextQuestion = q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK" || q.type === "PARAGRAPH";
+            const charDiff = isTextQuestion ? analyzeCharacterDiscrepancy(submittedAnswerText, expectedAnswerText) : null;
 
             return (
               <div
                 key={q.id}
-                className={`rounded-2xl border p-4 space-y-3 ${
+                className={`rounded-2xl border p-5 space-y-4 transition-all ${
                   isCorrect
-                    ? "border-emerald-200 bg-emerald-50/30"
+                    ? "border-emerald-200 bg-emerald-50/20"
                     : "border-rose-200 bg-rose-50/20"
                 }`}
               >
-                <div className="flex items-start justify-between gap-3">
+                {/* Question Header & Score */}
+                <div className="flex items-start justify-between gap-3 border-b border-slate-200/60 pb-3">
                   <div className="flex items-start gap-2.5">
                     {isCorrect ? (
                       <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" />
@@ -162,12 +190,20 @@ export const QuizResultView: React.FC<QuizResultViewProps> = ({
                       <XCircle className="h-5 w-5 shrink-0 text-rose-600 mt-0.5" />
                     )}
                     <div>
-                      <p className="text-xs font-bold text-slate-900">
+                      <h3 className="text-sm font-bold text-slate-900 leading-snug">
                         {idx + 1}. {q.questionText}
-                      </p>
-                      <span className="text-[10px] font-semibold text-slate-500">
-                        Marks Obtained: {ans?.obtainedMarks || 0} / {q.marks}
-                      </span>
+                      </h3>
+                      <div className="mt-1 flex items-center gap-2 text-[11px]">
+                        <span className="font-semibold text-slate-500">
+                          Marks: <strong className={isCorrect ? "text-emerald-700 font-bold" : "text-rose-700 font-bold"}>
+                            {ans?.obtainedMarks || 0}
+                          </strong> / {q.marks}
+                        </span>
+                        <span className="text-slate-300">•</span>
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 font-extrabold text-slate-600 text-[10px]">
+                          {q.type.replace(/_/g, " ")}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -176,8 +212,8 @@ export const QuizResultView: React.FC<QuizResultViewProps> = ({
                       handleFetchAiExplanation(
                         q.id,
                         q.questionText,
-                        ans?.selectedOptionIds?.join(", ") || ans?.textAnswer || "None",
-                        correctOpt?.text || q.correctAnswerText || "Reference Key"
+                        submittedAnswerText || "No response provided",
+                        expectedAnswerText || "Reference Key"
                       )
                     }
                     className="flex shrink-0 items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-[11px] font-bold text-blue-700 hover:bg-blue-100"
@@ -191,19 +227,73 @@ export const QuizResultView: React.FC<QuizResultViewProps> = ({
                   </button>
                 </div>
 
+                {/* Submitted vs Expected Answer Display Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {/* Candidate's Submitted Answer */}
+                  <div className={`rounded-xl border p-3.5 ${
+                    isCorrect
+                      ? "border-emerald-200 bg-white"
+                      : "border-rose-200 bg-white"
+                  }`}>
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+                      <FileText className="h-3 w-3 text-slate-500" />
+                      <span>Your Submitted Answer</span>
+                    </p>
+                    <p className={`font-mono text-xs font-bold leading-relaxed ${
+                      submittedAnswerText ? "text-slate-900" : "text-slate-400 italic"
+                    }`}>
+                      {submittedAnswerText || "(No Answer Provided)"}
+                    </p>
+                  </div>
+
+                  {/* Correct Answer Reference */}
+                  <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3.5">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-blue-600 mb-1 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-blue-600" />
+                      <span>Correct Answer Key</span>
+                    </p>
+                    <p className="font-mono text-xs font-bold text-blue-950 leading-relaxed">
+                      {expectedAnswerText || "(Manual grading required)"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Character & Recitation Discrepancy Breakdown for Text/Recitation Questions */}
+                {isTextQuestion && charDiff && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                        <Type className="h-4 w-4 text-blue-600" />
+                        <span>Recitation & Character Comparison Analysis</span>
+                      </div>
+                      {charDiff.isCaseInsensitiveMatch && (
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                          Case-Insensitive Match Validated ✓
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-[11px] text-slate-600 space-y-1 font-mono">
+                      <p>Submitted String length: <strong className="text-slate-900">{charDiff.submitted.length} chars</strong> | Expected String length: <strong className="text-slate-900">{charDiff.expected.length} chars</strong></p>
+                      <p className="text-slate-700 italic font-sans">{charDiff.suggestion}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Author Explanation */}
                 {q.explanation && (
                   <div className="rounded-xl bg-slate-100 p-3 text-xs text-slate-700">
-                    <span className="font-bold text-slate-900">Author Explanation: </span>
+                    <span className="font-bold text-slate-900">Instructor Explanation: </span>
                     <span>{q.explanation}</span>
                   </div>
                 )}
 
-                {/* AI Explanation Box */}
+                {/* AI Tutor Explanation Box */}
                 {aiExplanations[q.id] && (
-                  <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-3.5 text-xs text-blue-900 space-y-1">
+                  <div className="rounded-2xl border border-blue-200 bg-blue-50/90 p-4 text-xs text-blue-900 space-y-1">
                     <div className="flex items-center gap-1.5 font-bold">
                       <Sparkles className="h-4 w-4 text-blue-600" />
-                      <span>Gemini AI Tutor Guidance:</span>
+                      <span>Gemini AI Tutor Explanation:</span>
                     </div>
                     <p className="text-slate-800 leading-relaxed">{aiExplanations[q.id]}</p>
                   </div>

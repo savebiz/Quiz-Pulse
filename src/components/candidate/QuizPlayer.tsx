@@ -14,6 +14,7 @@ import {
   Shuffle,
 } from "lucide-react";
 import { Quiz, Question, QuizAttempt, AnswerSubmission, User } from "../../types";
+import { evaluateCaseInsensitiveMatch } from "../../lib/questionUtils";
 
 interface QuizPlayerProps {
   quiz: Quiz;
@@ -199,9 +200,8 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
           ans.isCorrect = false;
         }
       } else if (q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK") {
-        const cleanGiven = (ans.textAnswer || "").trim().toLowerCase();
-        const cleanExpected = (q.correctAnswerText || "").trim().toLowerCase();
-        if (cleanGiven && cleanExpected && cleanGiven === cleanExpected) {
+        const isMatched = evaluateCaseInsensitiveMatch(ans.textAnswer, q.correctAnswerText);
+        if (isMatched) {
           obtainedMarks += q.marks;
           ans.obtainedMarks = q.marks;
           ans.isCorrect = true;

@@ -1,6 +1,63 @@
 import { Question, QuestionType, OptionItem } from "../types";
 
 /**
+ * Normalizes text for case-insensitive, whitespace-tolerant, and punctuation-tolerant comparison.
+ */
+export function normalizeTextForComparison(text: string): string {
+  if (!text) return "";
+  return text
+    .trim()
+    .toLowerCase()
+    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "") // Remove trailing/surrounding punctuation
+    .replace(/\s+/g, " "); // Collapse multiple spaces
+}
+
+/**
+ * Robust case-insensitive answer matcher.
+ * Supports comma-separated or pipe-separated multiple valid answer variations.
+ * Example: expected "CPU, Central Processing Unit" matches submitted "central processing unit".
+ */
+export function evaluateCaseInsensitiveMatch(submittedText?: string, expectedText?: string): boolean {
+  if (!submittedText || !expectedText) return false;
+
+  const cleanSubmitted = normalizeTextForComparison(submittedText);
+  if (!cleanSubmitted) return false;
+
+  // Split expected answer by commas or pipes if multiple valid keys exist
+  const validVariations = expectedText
+    .split(/[,|]/)
+    .map((varItem) => normalizeTextForComparison(varItem))
+    .filter((v) => v.length > 0);
+
+  return validVariations.some((variation) => cleanSubmitted === variation);
+}
+
+/**
+ * Analyzes character-by-character discrepancies between candidate submission and expected answer.
+ * Perfect for recitation & text answers to pinpoint exact letter/character typos.
+ */
+export function analyzeCharacterDiscrepancy(submitted: string, expected: string) {
+  const normSub = (submitted || "").trim();
+  const normExp = (expected || "").trim();
+
+  const isExactCaseMatch = normSub === normExp;
+  const isCaseInsensitiveMatch = normSub.toLowerCase() === normExp.toLowerCase();
+
+  return {
+    submitted: normSub,
+    expected: normExp,
+    isExactCaseMatch,
+    isCaseInsensitiveMatch,
+    charLengthDiff: normSub.length - normExp.length,
+    suggestion: !isCaseInsensitiveMatch
+      ? `Expected "${normExp}", but received "${normSub}". Check for missing letters, typos, or extra spaces.`
+      : !isExactCaseMatch
+      ? `Matched case-insensitively! (Submitted "${normSub}" vs Expected "${normExp}").`
+      : "Exact match!",
+  };
+}
+
+/**
  * Intelligently converts a single question from one type to another,
  * preserving prompt text, marks, explanation, hint, difficulty, category, and tags,
  * while transforming the options / answer structure appropriately.
@@ -14,7 +71,6 @@ export function convertQuestionType(question: Question, targetType: QuestionType
     updatedAt: new Date().toISOString(),
   };
 
-  // Extract correct answer text from existing options if converting to text-based types
   const existingCorrectOption = question.options?.find((o) => o.isCorrect);
   const correctText =
     question.correctAnswerText ||
@@ -23,12 +79,11 @@ export function convertQuestionType(question: Question, targetType: QuestionType
 
   switch (targetType) {
     case "MULTIPLE_CHOICE": {
-      // Build options from existing text or default options
       let options: OptionItem[];
       if (question.options && question.options.length >= 2) {
         options = question.options.map((opt, idx) => ({
           ...opt,
-          isCorrect: idx === 0, // ensure at least one is selected if none
+          isCorrect: idx === 0,
         }));
         if (!options.some((o) => o.isCorrect)) {
           options[0].isCorrect = true;
@@ -99,7 +154,6 @@ export function convertQuestionType(question: Question, targetType: QuestionType
     }
 
     case "PARAGRAPH": {
-      // Essay / Free Text does not strictly require predefined option matches
       return {
         ...base,
         options: undefined,
