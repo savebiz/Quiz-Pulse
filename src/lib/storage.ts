@@ -71,7 +71,7 @@ export function initStorage() {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
   }
   if (!localStorage.getItem(STORAGE_KEYS.CURRENT_USER_ID)) {
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, JSON.stringify(INITIAL_USERS[2].id)); // Default to Instructor
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, JSON.stringify(INITIAL_USERS[0]?.id || "usr-super-admin"));
   }
   if (!localStorage.getItem(STORAGE_KEYS.ORGANIZATIONS)) {
     localStorage.setItem(STORAGE_KEYS.ORGANIZATIONS, JSON.stringify(INITIAL_ORGANIZATIONS));
@@ -100,7 +100,7 @@ export function getUsers(): User[] {
 
 export function getCurrentUser(): User {
   const users = getUsers();
-  const currentId = getItem<string>(STORAGE_KEYS.CURRENT_USER_ID, INITIAL_USERS[2].id);
+  const currentId = getItem<string>(STORAGE_KEYS.CURRENT_USER_ID, INITIAL_USERS[0]?.id || "usr-super-admin");
   return users.find((u) => u.id === currentId) || users[0];
 }
 
@@ -535,7 +535,7 @@ export function deleteQuizAssignment(assignmentId: string): void {
 // Reset/Seed helper
 export function resetToSeedData() {
   localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
-  localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, JSON.stringify(INITIAL_USERS[2].id));
+  localStorage.setItem(STORAGE_KEYS.CURRENT_USER_ID, JSON.stringify(INITIAL_USERS[0]?.id || "usr-super-admin"));
   localStorage.setItem(STORAGE_KEYS.ORGANIZATIONS, JSON.stringify(INITIAL_ORGANIZATIONS));
   localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(INITIAL_QUIZZES));
   localStorage.setItem(STORAGE_KEYS.QUESTION_BANKS, JSON.stringify(INITIAL_QUESTION_BANKS));
