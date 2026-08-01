@@ -5,11 +5,17 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  password?: string;
   avatar?: string;
+  phone?: string;
+  bio?: string;
+  jobTitle?: string;
+  department?: string;
   organizationId?: string;
   organizationName?: string;
   status: "ACTIVE" | "INACTIVE" | "PENDING";
   createdAt: string;
+  lastLogin?: string;
 }
 
 export interface Organization {

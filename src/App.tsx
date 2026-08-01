@@ -34,7 +34,9 @@ import { BulkImportModal } from "./components/questions/BulkImportModal";
 import { ManualGrading } from "./components/grading/ManualGrading";
 import { AnalyticsDashboard } from "./components/analytics/AnalyticsDashboard";
 import { AdminPanel } from "./components/admin/AdminPanel";
-import { UserRole, Quiz, QuizAttempt, Question } from "./types";
+import { UserProfileModal } from "./components/profile/UserProfileModal";
+import { AuthModal } from "./components/auth/AuthModal";
+import { UserRole, Quiz, QuizAttempt, Question, User } from "./types";
 
 export default function App() {
   const [initialized, setInitialized] = useState(false);
@@ -45,7 +47,12 @@ export default function App() {
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [activeAttempt, setActiveAttempt] = useState<QuizAttempt | null>(null);
 
-  // Modals
+  // User Profile & Auth Modals
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [editingTargetUser, setEditingTargetUser] = useState<User | null>(null);
+
+  // Other Modals
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
 
   // Initialize storage on mount
@@ -61,7 +68,7 @@ export default function App() {
   }, []);
 
   if (!initialized) {
-    return <div className="flex h-screen w-screen items-center justify-center bg-slate-50 text-slate-500">Loading QuizPulse...</div>;
+    return <div className="flex h-screen w-screen items-center justify-center bg-slate-50 text-slate-500 font-medium">Loading QuizPulse...</div>;
   }
 
   const currentUser = getCurrentUser();
@@ -113,6 +120,11 @@ export default function App() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onNavigate={(v) => setCurrentView(v)}
+          onOpenProfileModal={() => {
+            setEditingTargetUser(currentUser);
+            setShowProfileModal(true);
+          }}
+          onOpenAuthModal={() => setShowAuthModal(true)}
         />
       )}
 
@@ -220,11 +232,42 @@ export default function App() {
             )}
 
             {currentView === "admin-panel" && (
-              <AdminPanel users={users} auditLogs={auditLogs} organizations={[]} />
+              <AdminPanel
+                users={users}
+                auditLogs={auditLogs}
+                organizations={[]}
+                onUserChange={() => setTick((t) => t + 1)}
+                onEditUserProfile={(targetUser) => {
+                  setEditingTargetUser(targetUser);
+                  setShowProfileModal(true);
+                }}
+              />
             )}
           </main>
         </div>
       )}
+
+      {/* Profile Settings Modal */}
+      {editingTargetUser && (
+        <UserProfileModal
+          isOpen={showProfileModal}
+          currentUser={editingTargetUser}
+          onClose={() => {
+            setShowProfileModal(false);
+            setEditingTargetUser(null);
+          }}
+          onUserUpdated={() => setTick((t) => t + 1)}
+        />
+      )}
+
+      {/* Auth & Profile Switcher Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        users={users}
+        currentUser={currentUser}
+        onClose={() => setShowAuthModal(false)}
+        onUserAuthenticated={() => setTick((t) => t + 1)}
+      />
 
       {/* Bulk Upload Modal */}
       <BulkImportModal

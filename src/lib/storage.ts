@@ -90,7 +90,7 @@ export function initStorage() {
   }
 }
 
-// Current User & Role Switcher
+// Current User & Profile Operations
 export function getUsers(): User[] {
   return getItem<User[]>(STORAGE_KEYS.USERS, INITIAL_USERS);
 }
@@ -110,6 +110,110 @@ export function setCurrentUserRole(role: UserRole): User {
     return matched;
   }
   return users[0];
+}
+
+export function switchUser(userId: string): User {
+  const users = getUsers();
+  const found = users.find((u) => u.id === userId);
+  if (found) {
+    setItem(STORAGE_KEYS.CURRENT_USER_ID, found.id);
+    logAuditAction("USER_SWITCH", `Switched logged in profile to ${found.name} (${found.email})`);
+    return found;
+  }
+  return getCurrentUser();
+}
+
+export function createUser(userData: Partial<User> & { name: string; email: string; role: UserRole; password: string }): User {
+  const users = getUsers();
+  
+  // Enforce unique email check
+  const normalizedEmail = userData.email.trim().toLowerCase();
+  const existing = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+  if (existing) {
+    throw new Error(`A user with email '${userData.email}' already exists. Please use a unique email.`);
+  }
+
+  const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userData.name)}`;
+
+  const newUser: User = {
+    id: `usr-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    name: userData.name.trim(),
+    email: normalizedEmail,
+    role: userData.role,
+    password: userData.password,
+    avatar: userData.avatar || defaultAvatar,
+    phone: userData.phone || "",
+    bio: userData.bio || "",
+    jobTitle: userData.jobTitle || "",
+    department: userData.department || "",
+    organizationId: userData.organizationId || "org-tech-inst",
+    organizationName: userData.organizationName || "Tech Institute of Science",
+    status: userData.status || "ACTIVE",
+    createdAt: new Date().toISOString(),
+  };
+
+  const updatedUsers = [newUser, ...users];
+  setItem(STORAGE_KEYS.USERS, updatedUsers);
+  logAuditAction("USER_CREATED", `Created new unique profile '${newUser.name}' (${newUser.role})`);
+  return newUser;
+}
+
+export function updateUser(userId: string, updates: Partial<User>): User {
+  const users = getUsers();
+  const index = users.findIndex((u) => u.id === userId);
+  if (index === -1) {
+    throw new Error("User not found.");
+  }
+
+  // If email is changing, enforce unique email
+  if (updates.email) {
+    const normEmail = updates.email.trim().toLowerCase();
+    const existing = users.find((u) => u.id !== userId && u.email.toLowerCase() === normEmail);
+    if (existing) {
+      throw new Error(`Email '${updates.email}' is already in use by another user profile.`);
+    }
+    updates.email = normEmail;
+  }
+
+  const updatedUser = { ...users[index], ...updates };
+  users[index] = updatedUser;
+  setItem(STORAGE_KEYS.USERS, users);
+  logAuditAction("USER_UPDATED", `Updated profile information for '${updatedUser.name}'`);
+  return updatedUser;
+}
+
+export function deleteUser(userId: string): void {
+  const users = getUsers();
+  const target = users.find((u) => u.id === userId);
+  if (!target) return;
+
+  const filtered = users.filter((u) => u.id !== userId);
+  setItem(STORAGE_KEYS.USERS, filtered);
+
+  // If deleted active user, reset to first remaining
+  if (getItem<string>(STORAGE_KEYS.CURRENT_USER_ID, "") === userId && filtered.length > 0) {
+    setItem(STORAGE_KEYS.CURRENT_USER_ID, filtered[0].id);
+  }
+
+  logAuditAction("USER_DELETED", `Deleted user profile '${target.name}' (${target.email})`);
+}
+
+export function authenticateUser(email: string, pass: string): User | null {
+  const users = getUsers();
+  const normEmail = email.trim().toLowerCase();
+  const found = users.find((u) => u.email.toLowerCase() === normEmail && (u.password === pass || !u.password));
+  if (found) {
+    updateUser(found.id, { lastLogin: new Date().toISOString() });
+    switchUser(found.id);
+    logAuditAction("USER_LOGIN", `User '${found.name}' logged in successfully.`);
+    return found;
+  }
+  return null;
+}
+
+export function resetUserPassword(userId: string, newPassword: string): void {
+  updateUser(userId, { password: newPassword });
+  logAuditAction("PASSWORD_RESET", `Admin reset password for user ID ${userId}`);
 }
 
 // Quizzes
