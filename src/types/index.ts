@@ -17,6 +17,7 @@ export interface User {
   createdAt: string;
   lastLogin?: string;
   assignedQuizIds?: string[];
+  voucherCode?: string;
 }
 
 export interface QuizAssignment {
@@ -31,6 +32,7 @@ export interface QuizAssignment {
   assignedAt: string;
   dueDate?: string;
   accessCode?: string;
+  voucherCode?: string;
   status: "ASSIGNED" | "IN_PROGRESS" | "COMPLETED";
 }
 

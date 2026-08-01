@@ -100,6 +100,16 @@ export default function App() {
           setCurrentView("dashboard");
           setTick((t) => t + 1);
         }}
+        onVoucherAuthenticated={(candUser, targetQuiz) => {
+          setIsLoggedOut(false);
+          setTick((t) => t + 1);
+          if (targetQuiz) {
+            setSelectedQuiz(targetQuiz);
+            setCurrentView("take-quiz");
+          } else {
+            setCurrentView("dashboard");
+          }
+        }}
         onInstructorPortalClick={() => {
           setIsLoggedOut(false);
           setCurrentUserRole("INSTRUCTOR");

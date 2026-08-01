@@ -138,12 +138,15 @@ export function createUser(userData: Partial<User> & { name: string; email: stri
 
   const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userData.name)}`;
 
+  const voucherCode = userData.voucherCode || `VCH-${userData.name.trim().split(" ")[0].toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
   const newUser: User = {
     id: `usr-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
     name: userData.name.trim(),
     email: normalizedEmail,
     role: userData.role,
     password: userData.password,
+    voucherCode,
     avatar: userData.avatar || defaultAvatar,
     phone: userData.phone || "",
     bio: userData.bio || "",
@@ -159,6 +162,45 @@ export function createUser(userData: Partial<User> & { name: string; email: stri
   setItem(STORAGE_KEYS.USERS, updatedUsers);
   logAuditAction("USER_CREATED", `Created new unique profile '${newUser.name}' (${newUser.role})`);
   return newUser;
+}
+
+export function generateVoucherCode(studentName?: string): string {
+  const prefix = studentName ? studentName.split(" ")[0].toUpperCase().slice(0, 4) : "CAND";
+  const randomNum = Math.floor(1000 + Math.random() * 9000);
+  return `VCH-${prefix}-${randomNum}`;
+}
+
+export function authenticateByVoucherCode(code: string): { user: User; quiz: Quiz | null } | null {
+  if (!code) return null;
+  const cleanCode = code.trim().toUpperCase();
+
+  const users = getUsers();
+  const matchedUser = users.find((u) => {
+    const userVoucher = u.voucherCode?.toUpperCase();
+    const userPass = u.password?.toUpperCase();
+    const defaultVoucher = `VCH-${u.id.slice(-4).toUpperCase()}`;
+    return cleanCode === userVoucher || cleanCode === userPass || cleanCode === defaultVoucher;
+  });
+
+  if (!matchedUser) return null;
+
+  const quizzes = getQuizzes();
+  const assignments = getQuizAssignments();
+  const userAssignments = assignments.filter((a) => a.studentId === matchedUser.id);
+
+  let targetQuiz: Quiz | null = null;
+  if (userAssignments.length > 0) {
+    targetQuiz = quizzes.find((q) => q.id === userAssignments[0].quizId) || null;
+  } else if (matchedUser.assignedQuizIds && matchedUser.assignedQuizIds.length > 0) {
+    targetQuiz = quizzes.find((q) => q.id === matchedUser.assignedQuizIds![0]) || null;
+  }
+
+  if (!targetQuiz && quizzes.length > 0) {
+    targetQuiz = quizzes[0];
+  }
+
+  switchUser(matchedUser.id);
+  return { user: matchedUser, quiz: targetQuiz };
 }
 
 export function updateUser(userId: string, updates: Partial<User>): User {
