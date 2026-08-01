@@ -11,6 +11,7 @@ import {
   Save,
   HelpCircle,
   Sparkles,
+  Shuffle,
 } from "lucide-react";
 import { Quiz, Question, QuizAttempt, AnswerSubmission, User } from "../../types";
 
@@ -21,12 +22,42 @@ interface QuizPlayerProps {
   onCancel: () => void;
 }
 
+// Fisher-Yates Shuffle Helper
+function shuffleArray<T>(array: T[]): T[] {
+  const copy = [...array];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 export const QuizPlayer: React.FC<QuizPlayerProps> = ({
   quiz,
   currentUser,
   onCompleteAttempt,
   onCancel,
 }) => {
+  // Initialize prepared questions (apply shuffle settings if enabled)
+  const [preparedQuestions] = useState<Question[]>(() => {
+    let list = [...(quiz.questions || [])];
+
+    if (quiz.settings?.randomizeQuestions) {
+      list = shuffleArray(list);
+    }
+
+    if (quiz.settings?.randomizeOptions) {
+      list = list.map((q) => {
+        if (q.options && q.options.length > 0) {
+          return { ...q, options: shuffleArray(q.options) };
+        }
+        return q;
+      });
+    }
+
+    return list;
+  });
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, AnswerSubmission>>({});
   const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set());
@@ -74,7 +105,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [quiz.settings.preventCopyPaste]);
 
-  const currentQuestion = quiz.questions[currentIndex] || quiz.questions[0];
+  const currentQuestion = preparedQuestions[currentIndex] || preparedQuestions[0];
 
   const handleSelectOption = (questionId: string, optionId: string, isMulti: boolean) => {
     setAnswers((prev) => {
@@ -135,8 +166,8 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
   const handleSubmitFinalAttempt = () => {
     let obtainedMarks = 0;
 
-    // Calculate objective scores
-    quiz.questions.forEach((q) => {
+    // Calculate objective scores against preparedQuestions
+    preparedQuestions.forEach((q) => {
       const ans = answers[q.id];
       if (!ans) return;
 
@@ -186,11 +217,11 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
     });
 
     const timeSpentSeconds = totalSeconds - secondsRemaining;
-    const percentage = parseFloat(((obtainedMarks / quiz.totalMarks) * 100).toFixed(1));
+    const percentage = parseFloat(((obtainedMarks / (quiz.totalMarks || 1)) * 100).toFixed(1));
     const isPassed = percentage >= quiz.settings.passingScorePercentage;
 
     // Check if any question requires manual grading
-    const hasManualEssay = quiz.questions.some((q) => q.type === "PARAGRAPH");
+    const hasManualEssay = preparedQuestions.some((q) => q.type === "PARAGRAPH");
 
     const finalAttempt: QuizAttempt = {
       id: `att-${Date.now()}`,
@@ -233,7 +264,15 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
           </button>
           <div className="h-4 w-px bg-slate-800"></div>
           <div>
-            <h1 className="text-sm font-bold text-white truncate max-w-md">{quiz.title}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-bold text-white truncate max-w-md">{quiz.title}</h1>
+              {quiz.settings?.randomizeQuestions && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-900/60 border border-blue-700/50 px-2 py-0.5 text-[9px] font-extrabold text-blue-300">
+                  <Shuffle className="h-2.5 w-2.5" />
+                  <span>Shuffled</span>
+                </span>
+              )}
+            </div>
             <p className="text-[10px] text-slate-400">
               Candidate: <span className="text-slate-200 font-semibold">{currentUser.name}</span>
             </p>
@@ -279,7 +318,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
           <div className="flex items-center justify-between border-b border-slate-800 pb-3 text-xs">
             <div className="flex items-center gap-2">
               <span className="rounded-md bg-blue-900/60 text-blue-300 px-2.5 py-1 font-bold">
-                Question {currentIndex + 1} of {quiz.questions.length}
+                Question {currentIndex + 1} of {preparedQuestions.length}
               </span>
               <span className="text-slate-400">• {currentQuestion.marks} Marks</span>
             </div>
@@ -399,8 +438,8 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
             </button>
 
             <button
-              onClick={() => setCurrentIndex((prev) => Math.min(quiz.questions.length - 1, prev + 1))}
-              disabled={currentIndex === quiz.questions.length - 1}
+              onClick={() => setCurrentIndex((prev) => Math.min(preparedQuestions.length - 1, prev + 1))}
+              disabled={currentIndex === preparedQuestions.length - 1}
               className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-500 disabled:opacity-40"
             >
               <span>Next Question</span>
@@ -416,7 +455,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
           </h3>
 
           <div className="mt-4 grid grid-cols-5 gap-2">
-            {quiz.questions.map((q, idx) => {
+            {preparedQuestions.map((q, idx) => {
               const isAnswered =
                 (answers[q.id]?.selectedOptionIds && answers[q.id].selectedOptionIds!.length > 0) ||
                 (answers[q.id]?.textAnswer && answers[q.id].textAnswer!.trim().length > 0);
@@ -455,7 +494,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded bg-slate-700"></span>
-              <span>Unanswered ({quiz.questions.length - totalAnsweredCount})</span>
+              <span>Unanswered ({preparedQuestions.length - totalAnsweredCount})</span>
             </div>
           </div>
         </div>
@@ -468,7 +507,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
             <h2 className="text-lg font-bold text-white">Submit Assessment?</h2>
             <p className="mt-2 text-xs text-slate-400">
               You have answered <span className="font-bold text-white">{totalAnsweredCount}</span> out of{" "}
-              <span className="font-bold text-white">{quiz.questions.length}</span> questions.
+              <span className="font-bold text-white">{preparedQuestions.length}</span> questions.
             </p>
 
             <div className="mt-6 flex justify-end gap-3">
