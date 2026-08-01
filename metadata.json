@@ -1,0 +1,6 @@
+{
+  "name": "Quiz Pulse Platform",
+  "description": "Modern minimalist quiz & assessment platform with multi-role access, question banks, bulk import, timed tests, AI generator, manual grading, analytics, and instant certificates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
