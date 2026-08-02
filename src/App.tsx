@@ -84,9 +84,10 @@ export default function App() {
       const params = new URLSearchParams(window.location.search);
       const passParam = params.get("pass") || params.get("voucher") || params.get("code");
       const quizIdParam = params.get("quizId") || params.get("quiz");
+      const userIdParam = params.get("userId") || params.get("user");
 
       if (passParam) {
-        authenticateByVoucherCodeAsync(passParam, quizIdParam || undefined).then((result) => {
+        authenticateByVoucherCodeAsync(passParam, quizIdParam || undefined, userIdParam || undefined).then((result) => {
           setInitialized(true);
           if (result && result.user) {
             sessionStorage.setItem("quizpulse_active_session", "true");

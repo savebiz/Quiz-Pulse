@@ -180,30 +180,58 @@ export function generateVoucherCode(studentName?: string): string {
   return `VCH-${prefix}-${randomNum}`;
 }
 
-export function authenticateByVoucherCode(code: string): { user: User; quiz: Quiz | null } {
+export function authenticateByVoucherCode(
+  code: string,
+  targetQuizId?: string,
+  targetUserId?: string
+): { user: User; quiz: Quiz | null } {
   if (!code) return { user: null as any, quiz: null };
   const cleanCode = code.trim().toUpperCase();
-
   const users = getUsers();
-  let matchedUser = users.find((u) => {
-    const userVoucher = (u.voucherCode || "").toUpperCase();
-    const userPass = (u.password || "").toUpperCase();
-    const userIdVoucher = `VCH-${u.id.slice(-4).toUpperCase()}`;
-    const userNamePrefix = `VCH-${u.name.trim().split(" ")[0].toUpperCase()}`;
-    const cleanNoDash = cleanCode.replace(/-/g, "");
-    const userVoucherNoDash = userVoucher.replace(/-/g, "");
+  const quizzes = getQuizzes();
+  const assignments = getQuizAssignments();
 
-    return (
-      (userVoucher && cleanCode === userVoucher) ||
-      (userPass && cleanCode === userPass) ||
-      cleanCode === userIdVoucher ||
-      (userVoucher && cleanCode.includes(userVoucher)) ||
-      (userVoucherNoDash && cleanNoDash.includes(userVoucherNoDash)) ||
-      (userNamePrefix.length > 4 && cleanCode.includes(userNamePrefix))
+  // 1. Check if an assignment matches this voucher code directly
+  const matchedAssignment = assignments.find(
+    (a) =>
+      (a.voucherCode && a.voucherCode.trim().toUpperCase() === cleanCode) ||
+      (a.accessCode && a.accessCode.trim().toUpperCase() === cleanCode) ||
+      (targetQuizId && a.quizId === targetQuizId && (a.studentId === targetUserId || cleanCode.includes(a.studentId)))
+  );
+
+  let matchedUser: User | undefined = undefined;
+  let targetQuiz: Quiz | null = null;
+
+  if (matchedAssignment) {
+    matchedUser = users.find(
+      (u) => u.id === matchedAssignment.studentId || u.email.toLowerCase() === matchedAssignment.studentEmail?.toLowerCase()
     );
-  });
+    targetQuiz = quizzes.find((q) => q.id === matchedAssignment.quizId) || null;
+  }
 
-  // If student profile is not present in local device storage (e.g. candidate opening link on another device), auto-provision profile!
+  // 2. If no user resolved via assignment, search users by EXACT voucher code or email/ID
+  if (!matchedUser) {
+    if (targetUserId) {
+      matchedUser = users.find((u) => u.id === targetUserId);
+    }
+    if (!matchedUser) {
+      matchedUser = users.find((u) => {
+        const uVoucher = (u.voucherCode || "").trim().toUpperCase();
+        const uEmail = u.email.trim().toUpperCase();
+        const uId = u.id.trim().toUpperCase();
+        const uPass = (u.password || "").trim().toUpperCase();
+        return (
+          uVoucher === cleanCode ||
+          uEmail === cleanCode ||
+          uId === cleanCode ||
+          uPass === cleanCode ||
+          `VCH-${u.id.slice(-4).toUpperCase()}` === cleanCode
+        );
+      });
+    }
+  }
+
+  // 3. If still no user found, auto-provision profile using cleanCode
   if (!matchedUser) {
     const parts = cleanCode.split("-");
     const nameSeed = parts.length > 1 ? parts[1] : "Candidate";
@@ -223,19 +251,24 @@ export function authenticateByVoucherCode(code: string): { user: User; quiz: Qui
     });
   }
 
-  const quizzes = getQuizzes();
-  const assignments = getQuizAssignments();
-  const userAssignments = assignments.filter((a) => a.studentId === matchedUser!.id);
+  // 4. Resolve target quiz for matchedUser
+  if (!targetQuiz) {
+    if (targetQuizId) {
+      targetQuiz = quizzes.find((q) => q.id === targetQuizId) || null;
+    }
 
-  let targetQuiz: Quiz | null = null;
-  if (userAssignments.length > 0) {
-    targetQuiz = quizzes.find((q) => q.id === userAssignments[0].quizId) || null;
-  } else if (matchedUser.assignedQuizIds && matchedUser.assignedQuizIds.length > 0) {
-    targetQuiz = quizzes.find((q) => q.id === matchedUser.assignedQuizIds![0]) || null;
-  }
+    if (!targetQuiz) {
+      const userAssignments = assignments.filter((a) => a.studentId === matchedUser!.id || a.studentEmail?.toLowerCase() === matchedUser!.email.toLowerCase());
+      if (userAssignments.length > 0) {
+        targetQuiz = quizzes.find((q) => q.id === userAssignments[0].quizId) || null;
+      } else if (matchedUser.assignedQuizIds && matchedUser.assignedQuizIds.length > 0) {
+        targetQuiz = quizzes.find((q) => q.id === matchedUser.assignedQuizIds![0]) || null;
+      }
+    }
 
-  if (!targetQuiz && quizzes.length > 0) {
-    targetQuiz = quizzes[0];
+    if (!targetQuiz && quizzes.length > 0) {
+      targetQuiz = quizzes[0];
+    }
   }
 
   switchUser(matchedUser.id);
@@ -247,34 +280,31 @@ export function authenticateByVoucherCode(code: string): { user: User; quiz: Qui
  */
 export async function authenticateByVoucherCodeAsync(
   code: string,
-  targetQuizId?: string
+  targetQuizId?: string,
+  targetUserId?: string
 ): Promise<{ user: User; quiz: Quiz | null }> {
   if (!code) return { user: null as any, quiz: null };
   const cleanCode = code.trim().toUpperCase();
 
-  // 1. Local device authentication attempt
-  const syncResult = authenticateByVoucherCode(cleanCode);
+  // 1. Synchronous lookup
+  const syncResult = authenticateByVoucherCode(cleanCode, targetQuizId, targetUserId);
 
-  // If local authentication found a specific quiz matching targetQuizId, return it immediately
-  const quizzes = getQuizzes();
-  if (targetQuizId) {
-    const specified = quizzes.find((q) => q.id === targetQuizId);
-    if (specified) {
-      return { user: syncResult.user, quiz: specified };
-    }
+  // If local authentication found candidate's assigned quiz (not default fallback), return immediately
+  if (syncResult.quiz && syncResult.quiz.id !== "quiz-ai-core") {
+    return syncResult;
   }
 
   // 2. Query Supabase Cloud Database for voucher & assigned quiz
   try {
     const cloudRes = await fetchQuizAndUserByVoucherFromCloud(cleanCode);
     if (cloudRes && cloudRes.quiz) {
-      // Cache quiz locally for offline readiness
       saveQuiz(cloudRes.quiz);
-      switchUser(cloudRes.user.id);
-      return { user: cloudRes.user, quiz: cloudRes.quiz };
+      saveUser(cloudRes.user);
+      if (cloudRes.assignment) saveQuizAssignment(cloudRes.assignment);
+
+      return authenticateByVoucherCode(cleanCode, targetQuizId || cloudRes.quiz.id, cloudRes.user.id);
     }
 
-    // 3. Query targetQuizId directly from cloud if provided
     if (targetQuizId) {
       const cloudQuiz = await fetchQuizByIdFromCloud(targetQuizId);
       if (cloudQuiz) {
@@ -648,6 +678,11 @@ export function createQuizAssignment(
   if (!quiz) throw new Error("Quiz not found.");
   if (!student) throw new Error("Student candidate not found.");
 
+  const voucherCode = student.voucherCode || accessCode || generateVoucherCode(student.name);
+  if (!student.voucherCode) {
+    updateUser(student.id, { voucherCode });
+  }
+
   const newAssignment: QuizAssignment = {
     id: `asg-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
     quizId: quiz.id,
@@ -655,6 +690,7 @@ export function createQuizAssignment(
     studentId: student.id,
     studentName: student.name,
     studentEmail: student.email,
+    voucherCode,
     assignedBy: currentUser.id,
     assignedByName: currentUser.name,
     assignedAt: new Date().toISOString(),
