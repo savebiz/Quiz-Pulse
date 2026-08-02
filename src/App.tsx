@@ -25,6 +25,7 @@ import {
   switchUser,
   authenticateByVoucherCode,
   authenticateByVoucherCodeAsync,
+  clearAllQuizzesAndReset,
 } from "./lib/storage";
 import { Header } from "./components/common/Header";
 import { Sidebar } from "./components/common/Sidebar";
@@ -297,6 +298,10 @@ export default function App() {
                 onDuplicateQuiz={(id) => duplicateQuiz(id)}
                 onDeleteQuiz={(id) => deleteQuiz(id)}
                 onAuditAnswerKeys={(quiz) => setAuditingQuiz(quiz)}
+                onClearAllQuizzes={() => {
+                  clearAllQuizzesAndReset();
+                  setTick((t) => t + 1);
+                }}
               />
             )}
 

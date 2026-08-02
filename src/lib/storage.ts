@@ -74,8 +74,22 @@ function setItem<T>(key: string, value: T): void {
   }
 }
 
+export function clearAllQuizzesAndReset() {
+  setItem(STORAGE_KEYS.QUIZZES, []);
+  setItem(STORAGE_KEYS.ASSIGNMENTS, []);
+  setItem(STORAGE_KEYS.ATTEMPTS, []);
+  setItem(STORAGE_KEYS.CERTIFICATES, []);
+  localStorage.setItem("quizpulse_fresh_v3_reset", "true");
+  logAuditAction("ALL_QUIZZES_CLEARED", "Cleared all legacy quizzes, assignments, and attempts for fresh restart.");
+  notifyStateChanged();
+}
+
 // Initialize seed data if empty
 export function initStorage() {
+  if (!localStorage.getItem("quizpulse_fresh_v3_reset")) {
+    clearAllQuizzesAndReset();
+  }
+
   if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
   }
@@ -86,19 +100,19 @@ export function initStorage() {
     localStorage.setItem(STORAGE_KEYS.ORGANIZATIONS, JSON.stringify(INITIAL_ORGANIZATIONS));
   }
   if (!localStorage.getItem(STORAGE_KEYS.QUIZZES)) {
-    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify(INITIAL_QUIZZES));
+    localStorage.setItem(STORAGE_KEYS.QUIZZES, JSON.stringify([]));
   }
   if (!localStorage.getItem(STORAGE_KEYS.QUESTION_BANKS)) {
-    localStorage.setItem(STORAGE_KEYS.QUESTION_BANKS, JSON.stringify(INITIAL_QUESTION_BANKS));
+    localStorage.setItem(STORAGE_KEYS.QUESTION_BANKS, JSON.stringify([]));
   }
   if (!localStorage.getItem(STORAGE_KEYS.ATTEMPTS)) {
-    localStorage.setItem(STORAGE_KEYS.ATTEMPTS, JSON.stringify(INITIAL_ATTEMPTS));
+    localStorage.setItem(STORAGE_KEYS.ATTEMPTS, JSON.stringify([]));
   }
   if (!localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS)) {
     localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(INITIAL_AUDIT_LOGS));
   }
   if (!localStorage.getItem(STORAGE_KEYS.CERTIFICATES)) {
-    localStorage.setItem(STORAGE_KEYS.CERTIFICATES, JSON.stringify(INITIAL_CERTIFICATES));
+    localStorage.setItem(STORAGE_KEYS.CERTIFICATES, JSON.stringify([]));
   }
 }
 

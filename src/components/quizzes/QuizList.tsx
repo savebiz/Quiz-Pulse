@@ -27,6 +27,7 @@ interface QuizListProps {
   onDuplicateQuiz: (quizId: string) => void;
   onDeleteQuiz: (quizId: string) => void;
   onAuditAnswerKeys?: (quiz: Quiz) => void;
+  onClearAllQuizzes?: () => void;
 }
 
 export const QuizList: React.FC<QuizListProps> = ({
@@ -39,6 +40,7 @@ export const QuizList: React.FC<QuizListProps> = ({
   onDuplicateQuiz,
   onDeleteQuiz,
   onAuditAnswerKeys,
+  onClearAllQuizzes,
 }) => {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
@@ -71,27 +73,42 @@ export const QuizList: React.FC<QuizListProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header Bar */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      {/* Top Banner */}
+      <div className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-2xs sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">
-            {isStudent ? "Available Quizzes & Assessments" : "Quiz & Test Management"}
+          <h1 className="text-xl font-black tracking-tight text-slate-900 md:text-2xl">
+            {isStudent ? "Available Quizzes & Assessments" : "Assessment Management Console"}
           </h1>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500">
             {isStudent
               ? "Select an assigned assessment to take now or view past score history"
-              : "Manage, publish, duplicate, audit answer keys, or build new assessments"}
+              : "Author, configure, publish, and manage multi-type quizzes across your institution"}
           </p>
         </div>
 
         {!isStudent && (
-          <button
-            onClick={onCreateQuiz}
-            className="flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-transform active:scale-95"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Create New Quiz</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {quizzes.length > 0 && onClearAllQuizzes && (
+              <button
+                onClick={() => {
+                  if (confirm("Are you sure you want to clear ALL quizzes, assignments, and test attempts on the platform? This will start a completely fresh repository.")) {
+                    onClearAllQuizzes();
+                  }
+                }}
+                className="flex items-center gap-1.5 rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-extrabold text-rose-700 hover:bg-rose-100 transition-all active:scale-95"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Clear All Quizzes</span>
+              </button>
+            )}
+            <button
+              onClick={onCreateQuiz}
+              className="flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-transform active:scale-95"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create New Quiz</span>
+            </button>
+          </div>
         )}
       </div>
 
