@@ -6,9 +6,9 @@
 
 import { Quiz, QuizAssignment, QuizAttempt, User } from "../types";
 
-// Default Supabase Environment Configs (can be overridden via VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)
-const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || "https://lagoszone-quizpulse.supabase.co";
-const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhZ29zem9uZS1xdWl6cHVsc2UiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDA0MDAwMCwiZXhwIjoyMDE1NjE2MDAwfQ.eyJhbGciOiJIUzI1NiJ9";
+// Default Supabase Environment Configs (reads from VITE_SUPABASE_URL or defaults to project instance)
+const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || "https://vnhzocmlgcwqaptcwksm.supabase.co";
+const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZuaHpvY21sZ2N3cWFwdGN3a3NtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2Mzg1MzQsImV4cCI6MjEwMTIxNDUzNH0.VVZbB6G9TjjNDksSTEcdnTf0NaIBpJ3f3fuPYt7jJKM";
 
 /**
  * Check if Supabase client is connected

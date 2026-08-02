@@ -52,8 +52,16 @@ export default function App() {
   const [currentView, setCurrentView] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Logged out / Landing Page Session state
-  const [isLoggedOut, setIsLoggedOut] = useState(false);
+  // Logged out / Landing Page Session state (default to true when visiting root domain directly)
+  const [isLoggedOut, setIsLoggedOut] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const passParam = params.get("pass") || params.get("voucher") || params.get("code");
+      if (passParam) return false;
+      return sessionStorage.getItem("quizpulse_active_session") !== "true";
+    }
+    return true;
+  });
 
   // Selected Quiz state
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
@@ -81,6 +89,7 @@ export default function App() {
         authenticateByVoucherCodeAsync(passParam, quizIdParam || undefined).then((result) => {
           setInitialized(true);
           if (result && result.user) {
+            sessionStorage.setItem("quizpulse_active_session", "true");
             setIsLoggedOut(false);
             if (result.quiz) {
               setSelectedQuiz(result.quiz);
@@ -124,11 +133,13 @@ export default function App() {
     return (
       <CandidateLoginPage
         onCandidateLoggedIn={(candUser) => {
+          sessionStorage.setItem("quizpulse_active_session", "true");
           setIsLoggedOut(false);
           setCurrentView("dashboard");
           setTick((t) => t + 1);
         }}
         onVoucherAuthenticated={(candUser, targetQuiz) => {
+          sessionStorage.setItem("quizpulse_active_session", "true");
           setIsLoggedOut(false);
           setTick((t) => t + 1);
           if (targetQuiz) {
@@ -139,6 +150,7 @@ export default function App() {
           }
         }}
         onInstructorPortalClick={() => {
+          sessionStorage.setItem("quizpulse_active_session", "true");
           setIsLoggedOut(false);
           setCurrentUserRole("INSTRUCTOR");
           setCurrentView("dashboard");
@@ -186,6 +198,13 @@ export default function App() {
     return assignedIds.includes(q.id) || q.id === "quiz-ai-core"; // fallback seed assignment
   });
 
+  const handleSignOut = () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("quizpulse_active_session");
+    }
+    setIsLoggedOut(true);
+  };
+
   const handleInspectAttempt = (att: QuizAttempt) => {
     setActiveAttempt(att);
     const q = quizzes.find((x) => x.id === att.quizId);
@@ -211,6 +230,7 @@ export default function App() {
             setShowProfileModal(true);
           }}
           onOpenAuthModal={() => setShowAuthModal(true)}
+          onSignOut={handleSignOut}
         />
       )}
 
@@ -240,7 +260,7 @@ export default function App() {
                 attempts={attempts}
                 certificates={certificates}
                 onStartQuiz={handleStartQuiz}
-                onSignOut={() => setIsLoggedOut(true)}
+                onSignOut={handleSignOut}
               />
             )}
 

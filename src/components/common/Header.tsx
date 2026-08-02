@@ -26,6 +26,7 @@ interface HeaderProps {
   onNavigate: (view: string) => void;
   onOpenProfileModal?: () => void;
   onOpenAuthModal?: () => void;
+  onSignOut?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -36,6 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigate,
   onOpenProfileModal,
   onOpenAuthModal,
+  onSignOut,
 }) => {
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -179,12 +181,13 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={() => {
                     setShowProfileMenu(false);
-                    if (onOpenAuthModal) onOpenAuthModal();
+                    if (onSignOut) onSignOut();
+                    else if (onOpenAuthModal) onOpenAuthModal();
                   }}
                   className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span>Sign Out / Switch Account</span>
+                  <span>Sign Out</span>
                 </button>
               </div>
             </div>
