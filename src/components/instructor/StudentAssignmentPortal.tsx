@@ -154,7 +154,10 @@ export const StudentAssignmentPortal: React.FC<StudentAssignmentPortalProps> = (
   const getCandidateDirectLink = (student: User) => {
     const passCode = getCandidatePassCode(student);
     const origin = typeof window !== "undefined" ? window.location.origin : "https://lagoszone.vercel.app";
-    return `${origin}/?pass=${encodeURIComponent(passCode)}`;
+    const studentAssignments = assignments.filter((a) => a.studentId === student.id);
+    const assignedQuizId = studentAssignments.length > 0 ? studentAssignments[0].quizId : (student.assignedQuizIds?.[0] || "");
+    const quizQuery = assignedQuizId ? `&quizId=${encodeURIComponent(assignedQuizId)}` : "";
+    return `${origin}/?pass=${encodeURIComponent(passCode)}${quizQuery}`;
   };
 
   const handleCopyDirectExamLink = (student: User) => {

@@ -19,6 +19,15 @@ import {
   INITIAL_CERTIFICATES,
 } from "../data/seedData";
 import { evaluateCaseInsensitiveMatch } from "./questionUtils";
+import {
+  syncQuizToCloud,
+  syncAssignmentToCloud,
+  syncAttemptToCloud,
+  syncUserToCloud,
+  fetchQuizAndUserByVoucherFromCloud,
+  fetchQuizByIdFromCloud,
+  fetchQuizzesFromCloud,
+} from "./supabaseClient";
 
 const STORAGE_KEYS = {
   CURRENT_USER_ID: "quizpulse_current_user_id",
@@ -160,6 +169,7 @@ export function createUser(userData: Partial<User> & { name: string; email: stri
 
   const updatedUsers = [newUser, ...users];
   setItem(STORAGE_KEYS.USERS, updatedUsers);
+  syncUserToCloud(newUser).catch(() => {});
   logAuditAction("USER_CREATED", `Created new unique profile '${newUser.name}' (${newUser.role})`);
   return newUser;
 }
@@ -230,6 +240,53 @@ export function authenticateByVoucherCode(code: string): { user: User; quiz: Qui
 
   switchUser(matchedUser.id);
   return { user: matchedUser, quiz: targetQuiz };
+}
+
+/**
+ * Async Voucher Authenticator querying Supabase Cloud Database for cross-device quiz access
+ */
+export async function authenticateByVoucherCodeAsync(
+  code: string,
+  targetQuizId?: string
+): Promise<{ user: User; quiz: Quiz | null }> {
+  if (!code) return { user: null as any, quiz: null };
+  const cleanCode = code.trim().toUpperCase();
+
+  // 1. Local device authentication attempt
+  const syncResult = authenticateByVoucherCode(cleanCode);
+
+  // If local authentication found a specific quiz matching targetQuizId, return it immediately
+  const quizzes = getQuizzes();
+  if (targetQuizId) {
+    const specified = quizzes.find((q) => q.id === targetQuizId);
+    if (specified) {
+      return { user: syncResult.user, quiz: specified };
+    }
+  }
+
+  // 2. Query Supabase Cloud Database for voucher & assigned quiz
+  try {
+    const cloudRes = await fetchQuizAndUserByVoucherFromCloud(cleanCode);
+    if (cloudRes && cloudRes.quiz) {
+      // Cache quiz locally for offline readiness
+      saveQuiz(cloudRes.quiz);
+      switchUser(cloudRes.user.id);
+      return { user: cloudRes.user, quiz: cloudRes.quiz };
+    }
+
+    // 3. Query targetQuizId directly from cloud if provided
+    if (targetQuizId) {
+      const cloudQuiz = await fetchQuizByIdFromCloud(targetQuizId);
+      if (cloudQuiz) {
+        saveQuiz(cloudQuiz);
+        return { user: syncResult.user, quiz: cloudQuiz };
+      }
+    }
+  } catch (err) {
+    console.warn("Supabase cloud voucher resolution notice:", err);
+  }
+
+  return syncResult;
 }
 
 export function updateUser(userId: string, updates: Partial<User>): User {
@@ -335,6 +392,7 @@ export function saveQuiz(quiz: Quiz): void {
     updated = [quiz, ...quizzes];
   }
   setItem(STORAGE_KEYS.QUIZZES, updated);
+  syncQuizToCloud(quiz).catch(() => {});
   logAuditAction("QUIZ_SAVED", `Quiz '${quiz.title}' (${quiz.status}) saved with ${quiz.questions.length} questions.`);
 
   // Auto regrade candidates if quiz was published and has existing attempts
@@ -459,6 +517,7 @@ export function saveAttempt(attempt: QuizAttempt): void {
   const updated = idx >= 0 ? [...attempts] : [attempt, ...attempts];
   if (idx >= 0) updated[idx] = attempt;
   setItem(STORAGE_KEYS.ATTEMPTS, updated);
+  syncAttemptToCloud(attempt).catch(() => {});
 
   // Auto-generate certificate if passed and not yet existing
   if (attempt.isPassed && attempt.status === "COMPLETED" && !attempt.certificateId) {
@@ -572,6 +631,7 @@ export function saveQuizAssignment(assignment: QuizAssignment): void {
   const updated = index >= 0 ? [...assignments] : [assignment, ...assignments];
   if (index >= 0) updated[index] = assignment;
   setItem(STORAGE_KEYS.ASSIGNMENTS, updated);
+  syncAssignmentToCloud(assignment).catch(() => {});
 }
 
 export function createQuizAssignment(

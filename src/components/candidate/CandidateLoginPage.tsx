@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { User, Quiz } from "../../types";
-import { authenticateUser, authenticateByVoucherCode, getUsers } from "../../lib/storage";
+import { authenticateUser, authenticateByVoucherCode, authenticateByVoucherCodeAsync, getUsers } from "../../lib/storage";
 import {
   Sparkles,
   LogIn,
@@ -53,7 +53,9 @@ export const CandidateLoginPage: React.FC<CandidateLoginPageProps> = ({
     }
   }, []);
 
-  const handleVoucherSubmit = (e: React.FormEvent) => {
+  const [isVerifyingVoucher, setIsVerifyingVoucher] = useState(false);
+
+  const handleVoucherSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
 
@@ -62,13 +64,23 @@ export const CandidateLoginPage: React.FC<CandidateLoginPageProps> = ({
       return;
     }
 
-    const result = authenticateByVoucherCode(voucherInput);
-    if (!result) {
-      setErrorMsg("Invalid Voucher / Pass Code. Please check the pass code provided by your instructor.");
-      return;
-    }
+    setIsVerifyingVoucher(true);
+    try {
+      const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const targetQuizId = params?.get("quizId") || params?.get("quiz") || undefined;
+      const result = await authenticateByVoucherCodeAsync(voucherInput, targetQuizId);
 
-    onVoucherAuthenticated(result.user, result.quiz);
+      setIsVerifyingVoucher(false);
+      if (!result || !result.user) {
+        setErrorMsg("Invalid Voucher / Pass Code. Please check the pass code provided by your instructor.");
+        return;
+      }
+
+      onVoucherAuthenticated(result.user, result.quiz);
+    } catch (err: any) {
+      setIsVerifyingVoucher(false);
+      setErrorMsg("Error verifying pass code. Please try again.");
+    }
   };
 
   const handleCredentialsSubmit = (e: React.FormEvent) => {

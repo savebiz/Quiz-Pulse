@@ -24,6 +24,7 @@ import {
   getQuizAssignments,
   switchUser,
   authenticateByVoucherCode,
+  authenticateByVoucherCodeAsync,
 } from "./lib/storage";
 import { Header } from "./components/common/Header";
 import { Sidebar } from "./components/common/Sidebar";
@@ -67,29 +68,36 @@ export default function App() {
   // Other Modals
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
 
-  // Initialize storage on mount & process candidate voucher URL parameter
+  // Initialize storage on mount & process candidate voucher URL parameter asynchronously
   useEffect(() => {
     initStorage();
-    setInitialized(true);
 
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const passParam = params.get("pass") || params.get("voucher") || params.get("code");
+      const quizIdParam = params.get("quizId") || params.get("quiz");
+
       if (passParam) {
-        const result = authenticateByVoucherCode(passParam);
-        if (result) {
-          setIsLoggedOut(false);
-          if (result.quiz) {
-            setSelectedQuiz(result.quiz);
-            setCurrentView("take-quiz");
-          } else {
-            setCurrentView("dashboard");
+        authenticateByVoucherCodeAsync(passParam, quizIdParam || undefined).then((result) => {
+          setInitialized(true);
+          if (result && result.user) {
+            setIsLoggedOut(false);
+            if (result.quiz) {
+              setSelectedQuiz(result.quiz);
+              setCurrentView("take-quiz");
+            } else {
+              setCurrentView("dashboard");
+            }
+            // Clean query parameters from address bar
+            window.history.replaceState({}, document.title, window.location.pathname);
           }
-          // Clean query parameter from address bar
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
+        }).catch(() => {
+          setInitialized(true);
+        });
+        return;
       }
     }
+    setInitialized(true);
   }, []);
 
   // Subscribe to storage changes
