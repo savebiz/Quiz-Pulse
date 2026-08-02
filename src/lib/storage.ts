@@ -263,10 +263,8 @@ export function authenticateByVoucherCode(
       } else if (matchedUser.assignedQuizIds && matchedUser.assignedQuizIds.length > 0) {
         targetQuiz = quizzes.find((q) => q.id === matchedUser.assignedQuizIds![0]) || null;
       }
-    }
-
-    if (!targetQuiz && quizzes.length > 0) {
-      targetQuiz = quizzes[0];
+    if (!targetQuiz && targetQuizId) {
+      targetQuiz = quizzes.find((q) => q.id === targetQuizId) || null;
     }
   }
 

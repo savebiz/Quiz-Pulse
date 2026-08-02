@@ -95,7 +95,8 @@ export async function syncAssignmentToCloud(assignment: QuizAssignment): Promise
   const payload = {
     id: assignment.id,
     quiz_id: assignment.quizId,
-    user_id: assignment.userId,
+    user_id: assignment.studentId || (assignment as any).userId,
+    student_id: assignment.studentId,
     student_name: assignment.studentName,
     student_email: assignment.studentEmail,
     voucher_code: (assignment.voucherCode || assignment.accessCode || "").toUpperCase(),
@@ -162,28 +163,47 @@ export async function fetchQuizAndUserByVoucherFromCloud(
 
   if (assignRows && assignRows.length > 0) {
     const assignData = assignRows[0];
-    const quizId = assignData.quiz_id;
+    const quizId = assignData.quiz_id || assignData.data_json?.quizId;
+    const studentId = assignData.user_id || assignData.student_id || assignData.data_json?.studentId;
+    const studentEmail = assignData.student_email || assignData.data_json?.studentEmail;
 
     // Fetch associated Quiz
     const targetQuiz = await fetchQuizByIdFromCloud(quizId);
     if (targetQuiz) {
-      // Build candidate user profile
-      const candUser: User = {
-        id: assignData.user_id || `usr-cand-${cleanCode}`,
-        name: assignData.student_name || `Candidate (${cleanCode})`,
-        email: assignData.student_email || `candidate.${cleanCode.toLowerCase()}@quizpulse.com`,
-        role: "STUDENT",
-        voucherCode: cleanCode,
-        organizationId: "org-tech-inst",
-        organizationName: "Tech Institute of Science",
-        status: "ACTIVE",
-        createdAt: new Date().toISOString(),
-      };
+      // Query exact candidate user profile from users cloud table
+      let candUser: User | null = null;
+      if (studentId) {
+        const userRows = await supabaseFetch<any[]>(`users?id=eq.${encodeURIComponent(studentId)}&select=data_json`);
+        if (userRows && userRows.length > 0 && userRows[0].data_json) {
+          candUser = userRows[0].data_json as User;
+        }
+      }
+
+      if (!candUser && studentEmail) {
+        const userRows = await supabaseFetch<any[]>(`users?email=eq.${encodeURIComponent(studentEmail.toLowerCase())}&select=data_json`);
+        if (userRows && userRows.length > 0 && userRows[0].data_json) {
+          candUser = userRows[0].data_json as User;
+        }
+      }
+
+      if (!candUser) {
+        candUser = {
+          id: studentId || `usr-cand-${cleanCode}`,
+          name: assignData.student_name || assignData.data_json?.studentName || `Candidate (${cleanCode})`,
+          email: studentEmail || `candidate.${cleanCode.toLowerCase()}@quizpulse.com`,
+          role: "STUDENT",
+          voucherCode: cleanCode,
+          organizationId: "org-tech-inst",
+          organizationName: "Tech Institute of Science",
+          status: "ACTIVE",
+          createdAt: new Date().toISOString(),
+        };
+      }
 
       const assignment: QuizAssignment = assignData.data_json || {
         id: assignData.id,
         quizId: targetQuiz.id,
-        userId: candUser.id,
+        studentId: candUser.id,
         studentName: candUser.name,
         studentEmail: candUser.email,
         assignedBy: assignData.assigned_by || "Instructor",
@@ -204,24 +224,20 @@ export async function fetchQuizAndUserByVoucherFromCloud(
   if (userRows && userRows.length > 0 && userRows[0].data_json) {
     const candUser = userRows[0].data_json as User;
 
-    // Find any assignment associated with this user ID or fetch first cloud quiz
-    const allQuizzes = await fetchQuizzesFromCloud();
-    if (allQuizzes.length > 0) {
-      return {
-        user: candUser,
-        quiz: allQuizzes[0],
-        assignment: {
-          id: `asgn-${cleanCode}`,
-          quizId: allQuizzes[0].id,
-          userId: candUser.id,
-          studentName: candUser.name,
-          studentEmail: candUser.email,
-          assignedBy: "System",
-          assignedAt: new Date().toISOString(),
-          voucherCode: cleanCode,
-          status: "ASSIGNED",
-        },
-      };
+    // Find any assignment associated with this candidate user ID
+    const assignRows = await supabaseFetch<any[]>(
+      `assignments?user_id=eq.${encodeURIComponent(candUser.id)}&select=*`
+    );
+
+    if (assignRows && assignRows.length > 0) {
+      const targetQuiz = await fetchQuizByIdFromCloud(assignRows[0].quiz_id);
+      if (targetQuiz) {
+        return {
+          user: candUser,
+          quiz: targetQuiz,
+          assignment: assignRows[0].data_json || assignRows[0],
+        };
+      }
     }
   }
 
