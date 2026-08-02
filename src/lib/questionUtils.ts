@@ -21,15 +21,32 @@ export function evaluateCaseInsensitiveMatch(submittedText?: string, expectedTex
   if (!submittedText || !expectedText) return false;
 
   const cleanSubmitted = normalizeTextForComparison(submittedText);
-  if (!cleanSubmitted) return false;
+  const cleanExpected = normalizeTextForComparison(expectedText);
+  if (!cleanSubmitted || !cleanExpected) return false;
 
-  // Split expected answer by commas or pipes if multiple valid keys exist
-  const validVariations = expectedText
-    .split(/[,|]/)
-    .map((varItem) => normalizeTextForComparison(varItem))
-    .filter((v) => v.length > 0);
+  // 1. Direct full match after punctuation and whitespace normalization
+  if (cleanSubmitted === cleanExpected) return true;
 
-  return validVariations.some((variation) => cleanSubmitted === variation);
+  // 2. Check if expected contains pipe '|' delimiting distinct alternate answers (NOT commas in verses)
+  if (expectedText.includes("|")) {
+    const pipeVariations = expectedText
+      .split("|")
+      .map((varItem) => normalizeTextForComparison(varItem))
+      .filter((v) => v.length > 0);
+
+    if (pipeVariations.some((variation) => cleanSubmitted === variation)) {
+      return true;
+    }
+  }
+
+  // 3. Substring / Containment match for long recitation texts (e.g. candidate submitted full verse)
+  if (cleanSubmitted.length >= 10 && cleanExpected.length >= 10) {
+    if (cleanSubmitted.includes(cleanExpected) || cleanExpected.includes(cleanSubmitted)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**

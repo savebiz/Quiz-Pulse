@@ -245,24 +245,9 @@ export function authenticateByVoucherCode(
     }
   }
 
-  // 3. If still no user found, auto-provision profile using cleanCode
+  // 3. If no user matched locally, return null so authenticateByVoucherCodeAsync can fetch from Supabase Cloud
   if (!matchedUser) {
-    const parts = cleanCode.split("-");
-    const nameSeed = parts.length > 1 ? parts[1] : "Candidate";
-    const formattedName = nameSeed.charAt(0).toUpperCase() + nameSeed.slice(1).toLowerCase();
-
-    matchedUser = createUser({
-      name: `${formattedName} (Candidate)`,
-      email: `${nameSeed.toLowerCase()}.${Date.now().toString().slice(-4)}@student.edu`,
-      password: "Password123!",
-      voucherCode: cleanCode,
-      role: "STUDENT",
-      department: "Assessment Center",
-      jobTitle: "Candidate Student",
-      organizationId: "org-tech-inst",
-      organizationName: "Tech Institute of Science",
-      status: "ACTIVE",
-    });
+    return { user: null as any, quiz: null };
   }
 
   // 4. Resolve target quiz for matchedUser
@@ -300,18 +285,18 @@ export async function authenticateByVoucherCodeAsync(
   if (!code) return { user: null as any, quiz: null };
   const cleanCode = code.trim().toUpperCase();
 
-  // 1. Synchronous lookup
+  // 1. Synchronous lookup in local storage
   const syncResult = authenticateByVoucherCode(cleanCode, targetQuizId, targetUserId);
 
-  // If local authentication found candidate's assigned quiz (not default fallback), return immediately
-  if (syncResult.quiz && syncResult.quiz.id !== "quiz-ai-core") {
+  // If local authentication found candidate's assigned quiz and user, return immediately
+  if (syncResult.user && syncResult.quiz) {
     return syncResult;
   }
 
-  // 2. Query Supabase Cloud Database for voucher & assigned quiz
+  // 2. Query Supabase Cloud Database for voucher, user profile, and assigned quiz
   try {
     const cloudRes = await fetchQuizAndUserByVoucherFromCloud(cleanCode);
-    if (cloudRes && cloudRes.quiz) {
+    if (cloudRes && cloudRes.user && cloudRes.quiz) {
       saveQuiz(cloudRes.quiz);
       saveUser(cloudRes.user);
       if (cloudRes.assignment) saveQuizAssignment(cloudRes.assignment);
@@ -321,13 +306,38 @@ export async function authenticateByVoucherCodeAsync(
 
     if (targetQuizId) {
       const cloudQuiz = await fetchQuizByIdFromCloud(targetQuizId);
-      if (cloudQuiz) {
+      if (cloudQuiz && syncResult.user) {
         saveQuiz(cloudQuiz);
         return { user: syncResult.user, quiz: cloudQuiz };
       }
     }
   } catch (err) {
     console.warn("Supabase cloud voucher resolution notice:", err);
+  }
+
+  // 3. Fallback: If neither local nor cloud has candidate user profile, create fallback candidate user
+  if (!syncResult.user) {
+    const parts = cleanCode.split("-");
+    const nameSeed = parts.length > 1 ? parts[1] : "Candidate";
+    const formattedName = nameSeed.charAt(0).toUpperCase() + nameSeed.slice(1).toLowerCase();
+
+    const fallbackUser = createUser({
+      name: `${formattedName} (Candidate)`,
+      email: `${nameSeed.toLowerCase()}.${Date.now().toString().slice(-4)}@student.edu`,
+      password: "Password123!",
+      voucherCode: cleanCode,
+      role: "STUDENT",
+      department: "Assessment Center",
+      jobTitle: "Candidate Student",
+      organizationId: "org-tech-inst",
+      organizationName: "Tech Institute of Science",
+      status: "ACTIVE",
+    });
+
+    const quizzes = getQuizzes();
+    const quiz = quizzes.length > 0 ? quizzes[0] : null;
+    switchUser(fallbackUser.id);
+    return { user: fallbackUser, quiz };
   }
 
   return syncResult;

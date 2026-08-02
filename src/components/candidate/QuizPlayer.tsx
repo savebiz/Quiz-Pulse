@@ -204,7 +204,7 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
           ans.isCorrect = false;
         }
       } else if (q.type === "SHORT_TEXT" || q.type === "FILL_IN_BLANK" || q.type === "PARAGRAPH" || q.type === "SPELLING_BEE") {
-        const expectedRef = q.spellingWord || q.correctAnswerText || q.explanation || "";
+        const expectedRef = q.spellingWord || q.correctAnswerText || q.options?.find((o) => o.isCorrect)?.text || q.options?.[0]?.text || q.explanation || "";
         const isMatched = evaluateCaseInsensitiveMatch(ans.textAnswer, expectedRef);
         if (isMatched) {
           obtainedMarks += q.marks;
